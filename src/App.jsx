@@ -4,6 +4,10 @@ import { Pie } from 'react-chartjs-2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+// --- NEW FIREBASE IMPORTS ---
+import { db } from './firebase';
+import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot } from 'firebase/firestore';
+
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 // --- ANIMATION HELPER ---
@@ -53,7 +57,7 @@ export default function App() {
       <header className="mb-10 border-b border-slate-200 pb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-900">My Workspace</h1>
         <div className="text-sm font-medium text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">
-          Status: Online
+          Status: Cloud Connected ☁️
         </div>
       </header>
       
@@ -79,7 +83,7 @@ export default function App() {
             <h2 className="text-xl font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">Task Manager</h2>
             <span className="text-slate-400 group-hover:text-blue-500 transition-colors">→</span>
           </div>
-          <p className="text-slate-600 text-sm leading-relaxed">Persistent priority-based to-do list tagged to your email session.</p>
+          <p className="text-slate-600 text-sm leading-relaxed">Persistent cloud-synced to-do list tagged to your email.</p>
         </div>
       </div>
     </div>
@@ -145,70 +149,43 @@ export default function App() {
 
     const addSkuRow = () => setSkuInputs([...skuInputs, { id: Date.now(), name: '', gp: '' }]);
     const removeSkuRow = (id) => setSkuInputs(skuInputs.filter(sku => sku.id !== id));
-    
-    const updateSku = (id, field, value) => {
-      setSkuInputs(skuInputs.map(sku => sku.id === id ? { ...sku, [field]: value } : sku));
-    };
+    const updateSku = (id, field, value) => setSkuInputs(skuInputs.map(sku => sku.id === id ? { ...sku, [field]: value } : sku));
 
     const saveCurrentForm = () => {
-      if (!entity || !accountSid) {
-        alert("Please provide both Entity and Account SID."); return false;
-      }
+      if (!entity || !accountSid) { alert("Please provide both Entity and Account SID."); return false; }
       const validSkus = skuInputs.filter(s => s.name.trim() !== '' && s.gp !== '');
-      if (validSkus.length === 0) {
-        alert("Please add at least one valid SKU with a GP amount."); return false;
-      }
+      if (validSkus.length === 0) { alert("Please add at least one valid SKU with a GP amount."); return false; }
 
-      const newRecords = validSkus.map(s => ({
-        entity, accountSid, sku: s.name, gp: parseFloat(s.gp)
-      }));
-
+      const newRecords = validSkus.map(s => ({ entity, accountSid, sku: s.name, gp: parseFloat(s.gp) }));
       setRecords([...records, ...newRecords]);
       return true;
     };
 
     const handleSaveAndNext = () => {
-      if (saveCurrentForm()) {
-        setAccountSid(''); setSkuInputs([{ id: Date.now(), name: '', gp: '' }]); 
-      }
+      if (saveCurrentForm()) { setAccountSid(''); setSkuInputs([{ id: Date.now(), name: '', gp: '' }]); }
     };
 
     const handleCalculate = () => {
-      if (entity && accountSid && skuInputs[0].name && skuInputs[0].gp) {
-        saveCurrentForm();
-      }
+      if (entity && accountSid && skuInputs[0].name && skuInputs[0].gp) { saveCurrentForm(); }
       setView('summary');
     };
 
     const totalGP = records.reduce((sum, r) => sum + r.gp, 0);
-    
     const entityGroups = records.reduce((acc, r) => {
       if (!acc[r.entity]) acc[r.entity] = { total: 0, sids: {} };
       if (!acc[r.entity].sids[r.accountSid]) acc[r.entity].sids[r.accountSid] = 0;
-      acc[r.entity].sids[r.accountSid] += r.gp;
-      acc[r.entity].total += r.gp;
-      return acc;
+      acc[r.entity].sids[r.accountSid] += r.gp; acc[r.entity].total += r.gp; return acc;
     }, {});
 
     const pieLabels = Object.keys(entityGroups);
     const pieDataValues = Object.values(entityGroups).map(ent => ent.total);
     const bgColors = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6'];
-
-    const pieData = {
-      labels: pieLabels,
-      datasets: [{
-        data: pieDataValues,
-        backgroundColor: bgColors.slice(0, pieLabels.length),
-        borderWidth: 0,
-      }],
-    };
+    const pieData = { labels: pieLabels, datasets: [{ data: pieDataValues, backgroundColor: bgColors.slice(0, pieLabels.length), borderWidth: 0 }] };
 
     const handleLastMonthChange = (sid, value) => setLastMonthData({ ...lastMonthData, [sid]: parseFloat(value) || 0 });
 
     const exportToPDF = () => {
-      if (records.length === 0) {
-        alert("No data to export."); return;
-      }
+      if (records.length === 0) { alert("No data to export."); return; }
       const doc = new jsPDF();
       doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(30, 41, 59); 
       doc.text("GP Overview Report", 14, 22);
@@ -223,28 +200,20 @@ export default function App() {
       let currentY = 55; 
       
       if (chartCanvas) {
-        doc.setFontSize(12); doc.setTextColor(30, 41, 59);
-        doc.text("Entity Contribution Breakdown:", 14, currentY);
-        const chartImg = chartCanvas.toDataURL("image/png", 1.0);
-        doc.addImage(chartImg, 'PNG', 14, currentY + 5, 80, 80); 
+        doc.setFontSize(12); doc.setTextColor(30, 41, 59); doc.text("Entity Contribution Breakdown:", 14, currentY);
+        const chartImg = chartCanvas.toDataURL("image/png", 1.0); doc.addImage(chartImg, 'PNG', 14, currentY + 5, 80, 80); 
         currentY = 150; 
       }
 
       const tableRows = [];
       Object.entries(entityGroups).forEach(([entName, entData]) => {
         tableRows.push([{ content: entName, colSpan: 2, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
-        Object.entries(entData.sids).forEach(([sid, gp]) => {
-          tableRows.push([`SID: ${sid}`, `${gp.toLocaleString('en-IN')} INR`]);
-        });
+        Object.entries(entData.sids).forEach(([sid, gp]) => { tableRows.push([`SID: ${sid}`, `${gp.toLocaleString('en-IN')} INR`]); });
       });
 
       autoTable(doc, {
-        startY: currentY,
-        head: [['Account Description', 'Gross Profit (GP)']],
-        body: tableRows,
-        theme: 'grid',
-        headStyles: { fillColor: [37, 99, 235], textColor: 255 },
-        styles: { fontSize: 10, cellPadding: 5 },
+        startY: currentY, head: [['Account Description', 'Gross Profit (GP)']], body: tableRows,
+        theme: 'grid', headStyles: { fillColor: [37, 99, 235], textColor: 255 }, styles: { fontSize: 10, cellPadding: 5 },
       });
 
       doc.save('GP_Overview_Report.pdf');
@@ -254,47 +223,24 @@ export default function App() {
       <div className={pageBg}>
         <div className="flex justify-between items-center mb-8">
           <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-blue-600 flex items-center font-medium transition-colors">← Back to Dashboard</button>
-          {records.length > 0 && view === 'entry' && (
-             <span className="text-sm font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-               {records.length} SKUs Logged
-             </span>
-          )}
+          {records.length > 0 && view === 'entry' && (<span className="text-sm font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">{records.length} SKUs Logged</span>)}
         </div>
 
         {view === 'entry' && (
           <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
             <h2 className="text-2xl font-bold text-slate-900 mb-6">Data Entry Engine</h2>
-            
             <div className="grid grid-cols-2 gap-6 mb-8">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Entity Name</label>
-                <input type="text" value={entity} onChange={(e)=>setEntity(e.target.value)} className={inputClass} placeholder="e.g. Corp India" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Account SID</label>
-                <input type="text" value={accountSid} onChange={(e)=>setAccountSid(e.target.value)} className={inputClass} placeholder="e.g. ACC-1234" />
-              </div>
+              <div><label className="block text-sm font-semibold text-slate-700 mb-2">Entity Name</label><input type="text" value={entity} onChange={(e)=>setEntity(e.target.value)} className={inputClass} placeholder="e.g. Corp India" /></div>
+              <div><label className="block text-sm font-semibold text-slate-700 mb-2">Account SID</label><input type="text" value={accountSid} onChange={(e)=>setAccountSid(e.target.value)} className={inputClass} placeholder="e.g. ACC-1234" /></div>
             </div>
-
             <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-slate-800">SKU Details</h3>
-                <button onClick={addSkuRow} className="text-sm text-blue-600 font-medium hover:underline">+ Add Another SKU</button>
-              </div>
+              <div className="flex justify-between items-center mb-4"><h3 className="font-semibold text-slate-800">SKU Details</h3><button onClick={addSkuRow} className="text-sm text-blue-600 font-medium hover:underline">+ Add Another SKU</button></div>
               <div className="space-y-4">
                 {skuInputs.map((sku) => (
                   <div key={sku.id} className="flex gap-4 items-end">
-                    <div className="flex-1">
-                      <label className="block text-xs font-medium text-slate-500 mb-1">SKU Name</label>
-                      <input type="text" value={sku.name} onChange={(e) => updateSku(sku.id, 'name', e.target.value)} className={inputClass} placeholder="e.g. Premium Plan" />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs font-medium text-slate-500 mb-1">GP Amount (₹)</label>
-                      <input type="number" value={sku.gp} onChange={(e) => updateSku(sku.id, 'gp', e.target.value)} className={inputClass} placeholder="0" />
-                    </div>
-                    {skuInputs.length > 1 && (
-                      <button onClick={() => removeSkuRow(sku.id)} className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent">✕</button>
-                    )}
+                    <div className="flex-1"><label className="block text-xs font-medium text-slate-500 mb-1">SKU Name</label><input type="text" value={sku.name} onChange={(e) => updateSku(sku.id, 'name', e.target.value)} className={inputClass} placeholder="e.g. Premium Plan" /></div>
+                    <div className="flex-1"><label className="block text-xs font-medium text-slate-500 mb-1">GP Amount (₹)</label><input type="number" value={sku.gp} onChange={(e) => updateSku(sku.id, 'gp', e.target.value)} className={inputClass} placeholder="0" /></div>
+                    {skuInputs.length > 1 && (<button onClick={() => removeSkuRow(sku.id)} className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent">✕</button>)}
                   </div>
                 ))}
               </div>
@@ -323,10 +269,7 @@ export default function App() {
               {Object.entries(entityGroups).map(([entName, entData]) => (
                 <div key={entName} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-4">
-                    <h3 className="text-xl font-bold text-slate-900">{entName}</h3>
-                    <span className="font-bold text-blue-600 text-lg bg-blue-50 px-4 py-1 rounded-full border border-blue-100">
-                      ₹{entData.total.toLocaleString('en-IN')}
-                    </span>
+                    <h3 className="text-xl font-bold text-slate-900">{entName}</h3><span className="font-bold text-blue-600 text-lg bg-blue-50 px-4 py-1 rounded-full border border-blue-100">₹{entData.total.toLocaleString('en-IN')}</span>
                   </div>
                   <ul className="space-y-3">
                     {Object.entries(entData.sids).map(([sid, gp]) => (
@@ -356,39 +299,22 @@ export default function App() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-y border-slate-200 text-sm uppercase tracking-wider text-slate-500">
-                    <th className="p-4 font-semibold">Entity</th>
-                    <th className="p-4 font-semibold">Account SID</th>
-                    <th className="p-4 font-semibold">Current Month GP</th>
-                    <th className="p-4 font-semibold">Last Month GP</th>
-                    {showComparisonResult && <th className="p-4 font-semibold">Net Growth (₹)</th>}
-                    {showComparisonResult && <th className="p-4 font-semibold">Growth (%)</th>}
+                    <th className="p-4 font-semibold">Entity</th><th className="p-4 font-semibold">Account SID</th><th className="p-4 font-semibold">Current Month GP</th><th className="p-4 font-semibold">Last Month GP</th>
+                    {showComparisonResult && <th className="p-4 font-semibold">Net Growth (₹)</th>}{showComparisonResult && <th className="p-4 font-semibold">Growth (%)</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {Object.entries(entityGroups).map(([entName, entData]) => (
                     Object.entries(entData.sids).map(([sid, currentGp]) => {
-                      const lastM = lastMonthData[sid] || 0;
-                      const diff = currentGp - lastM;
-                      const pct = lastM === 0 ? 100 : ((diff / lastM) * 100);
-                      const isPositive = diff >= 0;
+                      const lastM = lastMonthData[sid] || 0; const diff = currentGp - lastM; const pct = lastM === 0 ? 100 : ((diff / lastM) * 100); const isPositive = diff >= 0;
                       return (
                         <tr key={sid} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-4 font-medium text-slate-900">{entName}</td>
-                          <td className="p-4 text-slate-600 text-sm">{sid}</td>
-                          <td className="p-4 font-mono font-medium text-slate-800">₹{currentGp.toLocaleString('en-IN')}</td>
+                          <td className="p-4 font-medium text-slate-900">{entName}</td><td className="p-4 text-slate-600 text-sm">{sid}</td><td className="p-4 font-mono font-medium text-slate-800">₹{currentGp.toLocaleString('en-IN')}</td>
                           <td className="p-4">
-                            {!showComparisonResult ? (
-                              <input type="number" value={lastMonthData[sid] || ''} onChange={(e) => handleLastMonthChange(sid, e.target.value)} className={`${inputClass} !py-1 !px-2 w-32`} placeholder="0" />
-                            ) : (
-                              <span className="font-mono text-slate-600">₹{lastM.toLocaleString('en-IN')}</span>
-                            )}
+                            {!showComparisonResult ? (<input type="number" value={lastMonthData[sid] || ''} onChange={(e) => handleLastMonthChange(sid, e.target.value)} className={`${inputClass} !py-1 !px-2 w-32`} placeholder="0" />) : (<span className="font-mono text-slate-600">₹{lastM.toLocaleString('en-IN')}</span>)}
                           </td>
-                          {showComparisonResult && (
-                            <td className={`p-4 font-mono font-bold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>{isPositive ? '+' : ''}{diff.toLocaleString('en-IN')}</td>
-                          )}
-                          {showComparisonResult && (
-                            <td className={`p-4 font-mono font-bold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>{isPositive ? '↑' : '↓'} {pct.toFixed(2)}%</td>
-                          )}
+                          {showComparisonResult && (<td className={`p-4 font-mono font-bold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>{isPositive ? '+' : ''}{diff.toLocaleString('en-IN')}</td>)}
+                          {showComparisonResult && (<td className={`p-4 font-mono font-bold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>{isPositive ? '↑' : '↓'} {pct.toFixed(2)}%</td>)}
                         </tr>
                       );
                     })
@@ -396,15 +322,8 @@ export default function App() {
                 </tbody>
               </table>
             </div>
-            {!showComparisonResult ? (
-              <div className="mt-8">
-                <button onClick={() => setShowComparisonResult(true)} className={buttonClass}>Execute Comparison Analysis</button>
-              </div>
-            ) : (
-              <div className="mt-8 flex gap-4">
-                 <button onClick={() => setShowComparisonResult(false)} className={buttonSecondaryClass}>Edit Last Month Data</button>
-                 <button onClick={() => { setRecords([]); setView('entry'); setShowComparisonResult(false); }} className="px-6 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition-colors">Clear All & Restart</button>
-              </div>
+            {!showComparisonResult ? (<div className="mt-8"><button onClick={() => setShowComparisonResult(true)} className={buttonClass}>Execute Comparison Analysis</button></div>) : (
+              <div className="mt-8 flex gap-4"><button onClick={() => setShowComparisonResult(false)} className={buttonSecondaryClass}>Edit Last Month Data</button><button onClick={() => { setRecords([]); setView('entry'); setShowComparisonResult(false); }} className="px-6 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition-colors">Clear All & Restart</button></div>
             )}
           </div>
         )}
@@ -412,110 +331,123 @@ export default function App() {
     );
   };
 
-  // --- COMPONENT: Persistent Task Manager ---
+  // --- REWRITTEN COMPONENT: FIREBASE CLOUD TASK MANAGER ---
   const TaskManager = () => {
-    // 1. Bulletproof Data Loading Initialization
-    const [activeUser, setActiveUser] = useState(() => localStorage.getItem('activeTaskUser') || null);
-    const [tasks, setTasks] = useState(() => {
-      const user = localStorage.getItem('activeTaskUser');
-      if (user) {
-        const saved = localStorage.getItem(`tasks_${user}`);
-        return saved ? JSON.parse(saved) : [];
-      }
-      return [];
-    });
+    const [loginEmail, setLoginEmail] = useState('');
+    const [activeUser, setActiveUser] = useState(() => localStorage.getItem('activeCloudUser') || null);
+    const [tasks, setTasks] = useState([]);
     
     // Task Form State
     const [subject, setSubject] = useState('');
-    const [taskSid, setTaskSid] = useState(''); // NEW: Account SID
+    const [taskSid, setTaskSid] = useState(''); 
     const [priority, setPriority] = useState('medium');
     const [deadline, setDeadline] = useState('');
     const [notes, setNotes] = useState('');
     
-    // Search & History State
     const [searchTerm, setSearchTerm] = useState('');
     const [showHistory, setShowHistory] = useState(false);
     
-    // Editing State
     const [editingId, setEditingId] = useState(null);
     const [editNotes, setEditNotes] = useState('');
     const [editDeadline, setEditDeadline] = useState('');
 
-    // --- DATA PERSISTENCE EFFECT ---
+    // --- FIREBASE REAL-TIME SYNC ---
     useEffect(() => {
-      if (activeUser) {
-        localStorage.setItem(`tasks_${activeUser}`, JSON.stringify(tasks));
-      }
-    }, [tasks, activeUser]);
+      if (!activeUser) return;
+      
+      // Query Firebase for tasks belonging to the logged-in email
+      const q = query(collection(db, 'tasks'), where('userEmail', '==', activeUser));
+      
+      // onSnapshot listens for real-time updates (cross-device sync!)
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const tasksArray = [];
+        querySnapshot.forEach((doc) => {
+          tasksArray.push({ id: doc.id, ...doc.data() });
+        });
+        setTasks(tasksArray);
+      });
 
-    // --- HANDLERS ---
+      return () => unsubscribe(); // Cleanup listener when leaving page
+    }, [activeUser]);
+
+    // --- FIREBASE HANDLERS ---
     const handleLogin = (e) => {
       e.preventDefault();
       if (loginEmail.trim()) {
         const email = loginEmail.trim().toLowerCase();
         setActiveUser(email);
-        localStorage.setItem('activeTaskUser', email);
-        // Load data synchronously on login
-        const saved = localStorage.getItem(`tasks_${email}`);
-        setTasks(saved ? JSON.parse(saved) : []);
+        localStorage.setItem('activeCloudUser', email); // Just remember who is logged in locally
       }
     };
-    const [loginEmail, setLoginEmail] = useState('');
 
     const handleLogout = () => {
       setActiveUser(null); setLoginEmail(''); setTasks([]);
-      localStorage.removeItem('activeTaskUser');
+      localStorage.removeItem('activeCloudUser');
     };
 
-    const handleAddTask = (e) => {
+    // CREATE to Firebase
+    const handleAddTask = async (e) => {
       e.preventDefault();
-      if (!subject.trim() || !taskSid.trim()) {
-        alert("Subject and Account SID are required.");
-        return;
+      if (!subject.trim() || !taskSid.trim()) return;
+
+      try {
+        await addDoc(collection(db, 'tasks'), {
+          userEmail: activeUser, // Tag it to this user
+          subject,
+          accountSid: taskSid,
+          priority,
+          deadline,
+          notes,
+          completed: false,
+          createdAt: new Date().toISOString()
+        });
+        // Clear form on success
+        setSubject(''); setTaskSid(''); setPriority('medium'); setDeadline(''); setNotes('');
+      } catch (error) {
+        console.error("Error adding document: ", error);
+        alert("Failed to save task. Check Firebase permissions!");
       }
-
-      const newTask = {
-        id: Date.now().toString(),
-        subject,
-        accountSid: taskSid,
-        priority,
-        deadline,
-        notes,
-        completed: false,
-        createdAt: new Date().toISOString()
-      };
-
-      setTasks([...tasks, newTask]);
-      setSubject(''); setTaskSid(''); setPriority('medium'); setDeadline(''); setNotes('');
     };
 
-    const toggleComplete = (id) => setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-    const deleteTask = (id) => { if (window.confirm("Delete this task permanently?")) setTasks(tasks.filter(t => t.id !== id)); };
-
-    const startEditing = (task) => {
-      setEditingId(task.id); setEditNotes(task.notes); setEditDeadline(task.deadline);
-    };
-    const saveEdit = (id) => {
-      setTasks(tasks.map(t => t.id === id ? { ...t, notes: editNotes, deadline: editDeadline } : t));
-      setEditingId(null);
+    // UPDATE Complete Status to Firebase
+    const toggleComplete = async (id, currentStatus) => {
+      try {
+        const taskRef = doc(db, 'tasks', id);
+        await updateDoc(taskRef, { completed: !currentStatus });
+      } catch (error) { console.error("Error updating: ", error); }
     };
 
-    // --- SORTING & FILTERING LOGIC ---
+    // DELETE from Firebase
+    const deleteTask = async (id) => {
+      if (window.confirm("Delete this task permanently from the cloud?")) {
+        try {
+          await deleteDoc(doc(db, 'tasks', id));
+        } catch (error) { console.error("Error deleting: ", error); }
+      }
+    };
+
+    const startEditing = (task) => { setEditingId(task.id); setEditNotes(task.notes); setEditDeadline(task.deadline); };
+    
+    // UPDATE Edits to Firebase
+    const saveEdit = async (id) => {
+      try {
+        const taskRef = doc(db, 'tasks', id);
+        await updateDoc(taskRef, { notes: editNotes, deadline: editDeadline });
+        setEditingId(null);
+      } catch (error) { console.error("Error saving edits: ", error); }
+    };
+
+    // --- SORTING & FILTERING ---
     const filteredTasks = tasks.filter(t => {
       if (!searchTerm) return true;
       const term = searchTerm.toLowerCase();
-      return (
-        t.subject.toLowerCase().includes(term) ||
-        (t.accountSid && t.accountSid.toLowerCase().includes(term)) ||
-        (t.notes && t.notes.toLowerCase().includes(term))
-      );
+      return (t.subject.toLowerCase().includes(term) || (t.accountSid && t.accountSid.toLowerCase().includes(term)) || (t.notes && t.notes.toLowerCase().includes(term)));
     });
 
     const priorityWeights = { urgent: 4, high: 3, medium: 2, low: 1 };
     
-    // Split into Active and Completed
     const activeTasks = filteredTasks.filter(t => !t.completed).sort((a, b) => priorityWeights[b.priority] - priorityWeights[a.priority]);
-    const completedTasks = filteredTasks.filter(t => t.completed).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Newest completed first
+    const completedTasks = filteredTasks.filter(t => t.completed).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     const getPriorityColor = (level) => {
       switch(level) {
@@ -527,24 +459,23 @@ export default function App() {
       }
     };
 
-    // --- RENDER: LOGIN VIEW ---
+    // --- RENDER VIEWS ---
     if (!activeUser) {
       return (
         <div className={pageBg}>
           <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-blue-600 mb-8 flex items-center font-medium transition-colors">← Back to Dashboard</button>
           <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mt-10">
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">Task Manager Login</h1>
-            <p className="text-slate-500 mb-6 text-sm">Enter your email to load your persistent task list.</p>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">Cloud Task Manager</h1>
+            <p className="text-slate-500 mb-6 text-sm">Log in to sync your tasks across devices instantly.</p>
             <form onSubmit={handleLogin} className="space-y-4">
               <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} className={inputClass} placeholder="e.g. akshay@workspace.com" required />
-              <button type="submit" className={buttonClass}>Access My Tasks</button>
+              <button type="submit" className={buttonClass}>Connect to Cloud</button>
             </form>
           </div>
         </div>
       );
     }
 
-    // --- RENDER: TASK MANAGER VIEW ---
     return (
       <div className={pageBg}>
         <div className="flex justify-between items-center mb-8">
@@ -556,108 +487,51 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* LEFT COL: Add Form */}
           <div className="lg:col-span-1">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 sticky top-10">
-              <h2 className="text-xl font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Create New Task</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Create Cloud Task</h2>
               <form onSubmit={handleAddTask} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Subject / Ticket ID</label>
-                  <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} className={inputClass} placeholder="e.g. Server Migration" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Account SID</label>
-                  <input type="text" value={taskSid} onChange={(e) => setTaskSid(e.target.value)} className={inputClass} placeholder="e.g. ACC-123" required />
-                </div>
+                <div><label className="block text-sm font-semibold text-slate-700 mb-1">Subject / Ticket ID</label><input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} className={inputClass} placeholder="e.g. Server Migration" required /></div>
+                <div><label className="block text-sm font-semibold text-slate-700 mb-1">Account SID</label><input type="text" value={taskSid} onChange={(e) => setTaskSid(e.target.value)} className={inputClass} placeholder="e.g. ACC-123" required /></div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Priority</label>
                   <select value={priority} onChange={(e) => setPriority(e.target.value)} className={inputClass}>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
+                    <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Deadline</label>
-                  <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={inputClass} />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Notes & Updates</label>
-                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={`${inputClass} resize-none h-24`} placeholder="Add initial context here..."></textarea>
-                </div>
-                <button type="submit" className={buttonClass}>Add Task</button>
+                <div><label className="block text-sm font-semibold text-slate-700 mb-1">Deadline</label><input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={inputClass} /></div>
+                <div><label className="block text-sm font-semibold text-slate-700 mb-1">Notes & Updates</label><textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={`${inputClass} resize-none h-24`} placeholder="Add initial context here..."></textarea></div>
+                <button type="submit" className={buttonClass}>Add to Cloud Sync</button>
               </form>
             </div>
           </div>
 
-          {/* RIGHT COL: Task List & Search */}
           <div className="lg:col-span-2 flex flex-col h-[85vh]">
-            
-            {/* Search Bar */}
-            <div className="mb-6">
-              <input 
-                type="text" 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-                className={`${inputClass} !py-4 text-lg`} 
-                placeholder="🔍 Search tasks by Subject, SID, or Notes..." 
-              />
-            </div>
-
-            {/* Toggle History / Active */}
+            <div className="mb-6"><input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`${inputClass} !py-4 text-lg`} placeholder="🔍 Search tasks by Subject, SID, or Notes..." /></div>
             <div className="flex gap-4 mb-4 border-b border-slate-200 pb-2">
-              <button 
-                onClick={() => setShowHistory(false)} 
-                className={`text-lg font-bold transition-colors ${!showHistory ? 'text-slate-900 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                Active Priority Board ({activeTasks.length})
-              </button>
-              <button 
-                onClick={() => setShowHistory(true)} 
-                className={`text-lg font-bold transition-colors ${showHistory ? 'text-slate-900 border-b-2 border-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                Completed History ({completedTasks.length})
-              </button>
+              <button onClick={() => setShowHistory(false)} className={`text-lg font-bold transition-colors ${!showHistory ? 'text-slate-900 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>Active Priority Board ({activeTasks.length})</button>
+              <button onClick={() => setShowHistory(true)} className={`text-lg font-bold transition-colors ${showHistory ? 'text-slate-900 border-b-2 border-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}>Completed History ({completedTasks.length})</button>
             </div>
 
-            {/* Scrollable List Container */}
             <div className="overflow-y-auto pr-2 space-y-4 pb-10 flex-1 custom-scrollbar">
-              
               {!showHistory ? (
-                /* --- ACTIVE TASKS VIEW --- */
                 activeTasks.length === 0 ? (
-                  <div className="bg-slate-100 border border-dashed border-slate-300 rounded-xl p-10 text-center text-slate-500">
-                    {searchTerm ? "No active tasks match your search." : "Your queue is empty. Add a task to get started."}
-                  </div>
+                  <div className="bg-slate-100 border border-dashed border-slate-300 rounded-xl p-10 text-center text-slate-500">{searchTerm ? "No active tasks match your search." : "Your cloud queue is empty."}</div>
                 ) : (
                   activeTasks.map(task => (
                     <div key={task.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
                       <div className="flex gap-4 items-start">
-                        <div className="pt-1">
-                          <input type="checkbox" checked={task.completed} onChange={() => toggleComplete(task.id)} className="w-5 h-5 cursor-pointer accent-emerald-600" />
-                        </div>
+                        <div className="pt-1"><input type="checkbox" checked={task.completed} onChange={() => toggleComplete(task.id, task.completed)} className="w-5 h-5 cursor-pointer accent-emerald-600" /></div>
                         <div className="flex-1">
                           <div className="flex justify-between items-start mb-1">
-                            <div>
-                               <h3 className="text-lg font-bold text-slate-900 leading-tight">{task.subject}</h3>
-                               <p className="text-xs font-mono text-slate-500 mt-1">SID: {task.accountSid}</p>
-                            </div>
-                            <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full border ${getPriorityColor(task.priority)}`}>
-                              {task.priority}
-                            </span>
+                            <div><h3 className="text-lg font-bold text-slate-900 leading-tight">{task.subject}</h3><p className="text-xs font-mono text-slate-500 mt-1">SID: {task.accountSid}</p></div>
+                            <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full border ${getPriorityColor(task.priority)}`}>{task.priority}</span>
                           </div>
                           
                           {editingId !== task.id ? (
                             <>
-                              <div className="text-sm text-slate-500 font-medium mb-3 mt-2">
-                                Deadline: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No Deadline'}
-                              </div>
-                              {task.notes && (
-                                <div className="bg-slate-50 p-3 rounded-lg text-sm text-slate-700 border border-slate-100 mb-3 whitespace-pre-wrap">
-                                  {task.notes}
-                                </div>
-                              )}
+                              <div className="text-sm text-slate-500 font-medium mb-3 mt-2">Deadline: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No Deadline'}</div>
+                              {task.notes && (<div className="bg-slate-50 p-3 rounded-lg text-sm text-slate-700 border border-slate-100 mb-3 whitespace-pre-wrap">{task.notes}</div>)}
                               <div className="flex gap-3">
                                 <button onClick={() => startEditing(task)} className="text-sm text-blue-600 font-medium hover:underline">Edit / Add Update</button>
                                 <button onClick={() => deleteTask(task.id)} className="text-sm text-red-500 font-medium hover:underline">Delete</button>
@@ -665,16 +539,10 @@ export default function App() {
                             </>
                           ) : (
                             <div className="mt-3 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                              <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">Update Deadline</label>
-                                <input type="date" value={editDeadline} onChange={(e) => setEditDeadline(e.target.value)} className={`${inputClass} !py-2`} />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">Add Updates/Notes</label>
-                                <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className={`${inputClass} resize-none h-24`} />
-                              </div>
+                              <div><label className="block text-xs font-semibold text-slate-600 mb-1">Update Deadline</label><input type="date" value={editDeadline} onChange={(e) => setEditDeadline(e.target.value)} className={`${inputClass} !py-2`} /></div>
+                              <div><label className="block text-xs font-semibold text-slate-600 mb-1">Add Updates/Notes</label><textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className={`${inputClass} resize-none h-24`} /></div>
                               <div className="flex gap-2">
-                                <button onClick={() => saveEdit(task.id)} className="bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-emerald-700">Save Updates</button>
+                                <button onClick={() => saveEdit(task.id)} className="bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-emerald-700">Save to Cloud</button>
                                 <button onClick={() => setEditingId(null)} className="bg-slate-200 text-slate-700 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-slate-300">Cancel</button>
                               </div>
                             </div>
@@ -685,36 +553,20 @@ export default function App() {
                   ))
                 )
               ) : (
-                /* --- HISTORY TASKS VIEW --- */
                 completedTasks.length === 0 ? (
-                  <div className="bg-slate-100 border border-dashed border-slate-300 rounded-xl p-10 text-center text-slate-500">
-                    {searchTerm ? "No completed tasks match your search." : "You haven't completed any tasks yet."}
-                  </div>
+                  <div className="bg-slate-100 border border-dashed border-slate-300 rounded-xl p-10 text-center text-slate-500">{searchTerm ? "No completed tasks match your search." : "You haven't completed any cloud tasks yet."}</div>
                 ) : (
                   completedTasks.map(task => (
                     <div key={task.id} className="bg-slate-50 p-5 rounded-xl border border-slate-200 opacity-70 hover:opacity-100 transition-opacity duration-200">
                       <div className="flex gap-4 items-start">
-                        <div className="pt-1">
-                          <input type="checkbox" checked={task.completed} onChange={() => toggleComplete(task.id)} className="w-5 h-5 cursor-pointer accent-slate-400" />
-                        </div>
+                        <div className="pt-1"><input type="checkbox" checked={task.completed} onChange={() => toggleComplete(task.id, task.completed)} className="w-5 h-5 cursor-pointer accent-slate-400" /></div>
                         <div className="flex-1">
                           <div className="flex justify-between items-start mb-1">
-                             <div>
-                               <h3 className="text-lg font-bold text-slate-600 line-through leading-tight">{task.subject}</h3>
-                               <p className="text-xs font-mono text-slate-400 mt-1">SID: {task.accountSid}</p>
-                            </div>
-                            <span className="text-xs font-bold uppercase px-3 py-1 rounded-full border bg-slate-200 text-slate-500 border-slate-300">
-                              Completed
-                            </span>
+                             <div><h3 className="text-lg font-bold text-slate-600 line-through leading-tight">{task.subject}</h3><p className="text-xs font-mono text-slate-400 mt-1">SID: {task.accountSid}</p></div>
+                            <span className="text-xs font-bold uppercase px-3 py-1 rounded-full border bg-slate-200 text-slate-500 border-slate-300">Completed</span>
                           </div>
-                          {task.notes && (
-                            <div className="bg-white p-3 rounded-lg text-sm text-slate-500 border border-slate-200 mb-3 whitespace-pre-wrap mt-2">
-                              {task.notes}
-                            </div>
-                          )}
-                          <div className="flex gap-3">
-                            <button onClick={() => deleteTask(task.id)} className="text-sm text-red-500 font-medium hover:underline">Delete Permanently</button>
-                          </div>
+                          {task.notes && (<div className="bg-white p-3 rounded-lg text-sm text-slate-500 border border-slate-200 mb-3 whitespace-pre-wrap mt-2">{task.notes}</div>)}
+                          <div className="flex gap-3"><button onClick={() => deleteTask(task.id)} className="text-sm text-red-500 font-medium hover:underline">Delete Permanently</button></div>
                         </div>
                       </div>
                     </div>
