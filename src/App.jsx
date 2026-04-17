@@ -193,7 +193,7 @@ export default function App() {
             <div className="max-w-md"><button onClick={handleCalculate} className={buttonClass}>Calculate Required Allocation</button></div>
             {finalResult !== null && (
               <div className="mt-8 pt-8 border-t border-slate-200/50 animate-in fade-in zoom-in duration-500">
-                <p className="text-sm font-bold text-blue-600/80 mb-3 uppercase tracking-widest">Final Result</p>
+                <p className="text-sm font-bold text-blue-600/80 mb-3 uppercase tracking-widest">Total Numbers required (inclusive of buffer)</p>
                 <div className="px-12 py-8 inline-block bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/50 rounded-3xl shadow-inner"><CountUp to={finalResult} /></div>
               </div>
             )}
