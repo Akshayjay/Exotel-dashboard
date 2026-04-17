@@ -10,7 +10,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-// --- ANIMATION HELPER (Upgraded to handle decimals) ---
+// --- ANIMATION HELPER ---
 const CountUp = ({ to, prefix = '', suffix = '' }) => {
   const [count, setCount] = useState(0);
 
@@ -20,7 +20,7 @@ const CountUp = ({ to, prefix = '', suffix = '' }) => {
     }
     let start = 0;
     const end = parseFloat(to);
-    const isDecimal = end % 1 !== 0; // Check if the target is a decimal
+    const isDecimal = end % 1 !== 0; 
     const duration = 1200; 
     const increment = end / (duration / 16); 
 
@@ -52,47 +52,69 @@ export default function App() {
   const buttonSecondaryClass = "w-full bg-slate-200 text-slate-800 font-semibold py-3 rounded-lg shadow-sm hover:bg-slate-300 transition-all duration-200";
   const inputClass = "w-full p-3 bg-white border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow";
 
-  // --- COMPONENT: Home Dashboard ---
+  // --- NEW VIBRANT & ANIMATED HOME DASHBOARD ---
   const HomeDashboard = () => (
-    <div className={pageBg}>
-      <header className="mb-10 border-b border-slate-200 pb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-900">My Workspace</h1>
-        <div className="text-sm font-medium text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">
-          Status: Cloud Connected ☁️
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-800 relative overflow-hidden flex flex-col items-center">
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div onClick={() => setCurrentPage('la-pool')} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-pointer transition-all duration-200 group">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">LA Pool Calculator</h2>
-            <span className="text-slate-400 group-hover:text-blue-500 transition-colors">→</span>
-          </div>
-          <p className="text-slate-600 text-sm leading-relaxed">Calculate required allocations using active Part-A and Part-B inputs.</p>
-        </div>
+      {/* Decorative Background Blurs */}
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-300/30 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-pulse"></div>
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-300/30 rounded-full mix-blend-multiply filter blur-3xl opacity-60"></div>
+      <div className="absolute -bottom-32 left-1/3 w-[500px] h-[500px] bg-pink-300/30 rounded-full mix-blend-multiply filter blur-3xl opacity-60"></div>
 
-        <div onClick={() => setCurrentPage('cpm-calculator')} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-pointer transition-all duration-200 group">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">CPM & Channels</h2>
-            <span className="text-slate-400 group-hover:text-blue-500 transition-colors">→</span>
+      <div className="relative z-10 max-w-7xl w-full">
+        <header className="mb-16 flex flex-col md:flex-row items-start md:items-end justify-between gap-6 border-b border-slate-200/50 pb-8">
+          <div>
+            <h1 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tight">
+              Simplylife <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Dashboard</span>
+            </h1>
+            <p className="text-slate-500 font-medium mt-3 text-lg">Professional suite for data, analytics, and productivity.</p>
           </div>
-          <p className="text-slate-600 text-sm leading-relaxed">Calculate CPM and Streaming Channels needed for your campaigns.</p>
-        </div>
+          <div className="text-sm font-bold text-emerald-700 bg-emerald-100/80 backdrop-blur-sm px-5 py-2.5 rounded-full border border-emerald-200 shadow-sm flex items-center gap-3">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            Cloud Connected
+          </div>
+        </header>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          
+          {/* LA Pool Card */}
+          <div onClick={() => setCurrentPage('la-pool')} className="bg-white/80 backdrop-blur-md p-8 rounded-[2rem] border border-slate-200/50 cursor-pointer hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-bl-full -z-10 group-hover:scale-125 transition-transform duration-500"></div>
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center mb-6 text-white font-bold text-2xl shadow-lg shadow-blue-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">LA</div>
+            <h2 className="text-2xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors">LA Pool</h2>
+            <p className="text-slate-500 text-sm mt-3 leading-relaxed font-medium">Calculate required allocations using active Part-A and Part-B inputs.</p>
+          </div>
 
-        <div onClick={() => setCurrentPage('gp-overview')} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-pointer transition-all duration-200 group">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">GP Overview</h2>
-            <span className="text-slate-400 group-hover:text-blue-500 transition-colors">→</span>
+          {/* CPM Card */}
+          <div onClick={() => setCurrentPage('cpm-calculator')} className="bg-white/80 backdrop-blur-md p-8 rounded-[2rem] border border-slate-200/50 cursor-pointer hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-50 to-pink-50 rounded-bl-full -z-10 group-hover:scale-125 transition-transform duration-500"></div>
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-400 rounded-2xl flex items-center justify-center mb-6 text-white font-bold text-2xl shadow-lg shadow-purple-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">CP</div>
+            <h2 className="text-2xl font-bold text-slate-800 group-hover:text-purple-600 transition-colors">CPM & Channels</h2>
+            <p className="text-slate-500 text-sm mt-3 leading-relaxed font-medium">Calculate CPM and Streaming Channels needed for your campaigns.</p>
           </div>
-          <p className="text-slate-600 text-sm leading-relaxed">Input accounts, track SKUs, view charts, and download PDF reports.</p>
-        </div>
 
-        <div onClick={() => setCurrentPage('task-manager')} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-pointer transition-all duration-200 group">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">Task Manager</h2>
-            <span className="text-slate-400 group-hover:text-blue-500 transition-colors">→</span>
+          {/* GP Overview Card */}
+          <div onClick={() => setCurrentPage('gp-overview')} className="bg-white/80 backdrop-blur-md p-8 rounded-[2rem] border border-slate-200/50 cursor-pointer hover:shadow-2xl hover:shadow-emerald-500/20 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-bl-full -z-10 group-hover:scale-125 transition-transform duration-500"></div>
+            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-400 rounded-2xl flex items-center justify-center mb-6 text-white font-bold text-2xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300">GP</div>
+            <h2 className="text-2xl font-bold text-slate-800 group-hover:text-emerald-600 transition-colors">GP Overview</h2>
+            <p className="text-slate-500 text-sm mt-3 leading-relaxed font-medium">Input accounts, track SKUs, view dynamic charts, and export PDF reports.</p>
           </div>
-          <p className="text-slate-600 text-sm leading-relaxed">Persistent cloud-synced to-do list tagged to your email.</p>
+
+          {/* Task Manager Card */}
+          <div onClick={() => setCurrentPage('task-manager')} className="bg-slate-900 p-8 rounded-[2rem] border border-slate-800 cursor-pointer hover:shadow-2xl hover:shadow-indigo-500/40 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden">
+            <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl group-hover:bg-indigo-500/40 transition-all duration-500"></div>
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-indigo-500/30 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300 border border-indigo-400/30">TM</div>
+              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-black tracking-widest uppercase border border-indigo-500/30 backdrop-blur-sm">Private Sync</span>
+            </div>
+            <h2 className="text-2xl font-bold text-white group-hover:text-indigo-300 transition-colors">Task Manager</h2>
+            <p className="text-slate-400 text-sm mt-3 leading-relaxed font-medium">Persistent cloud-synced to-do list tagged securely to your email.</p>
+          </div>
+
         </div>
       </div>
     </div>
@@ -116,18 +138,10 @@ export default function App() {
         alert("Please fill in all fields with valid numbers.");
         return;
       }
-
-      // Formula 1: CPM Needed = roundup(callsperday / (agent calling * 60), 0)
       const cpmNeeded = Math.ceil(calls / (hours * 60));
-
-      // Formula 2: Streaming Channels = cpmneeded * pickup rate * (average call duration / 60)
-      // Note: Assumes pickup rate is entered as a percentage (e.g., 15 for 15%)
       const streamingChannels = cpmNeeded * (rate / 100) * (duration / 60);
 
-      setResults({
-        cpm: cpmNeeded,
-        channels: streamingChannels
-      });
+      setResults({ cpm: cpmNeeded, channels: streamingChannels });
     };
 
     return (
@@ -141,22 +155,10 @@ export default function App() {
           
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Campaign Hours (Hrs)</label>
-                <input type="number" value={campaignHours} onChange={(e) => setCampaignHours(e.target.value)} className={inputClass} placeholder="e.g. 8" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Calls Per Day</label>
-                <input type="number" value={callsPerDay} onChange={(e) => setCallsPerDay(e.target.value)} className={inputClass} placeholder="e.g. 5000" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Avg Call Duration (sec)</label>
-                <input type="number" value={callDuration} onChange={(e) => setCallDuration(e.target.value)} className={inputClass} placeholder="e.g. 120" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Pickup Rate (%)</label>
-                <input type="number" value={pickupRate} onChange={(e) => setPickupRate(e.target.value)} className={inputClass} placeholder="e.g. 15" />
-              </div>
+              <div><label className="block text-sm font-semibold text-slate-700 mb-2">Campaign Hours (Hrs)</label><input type="number" value={campaignHours} onChange={(e) => setCampaignHours(e.target.value)} className={inputClass} placeholder="e.g. 8" /></div>
+              <div><label className="block text-sm font-semibold text-slate-700 mb-2">Calls Per Day</label><input type="number" value={callsPerDay} onChange={(e) => setCallsPerDay(e.target.value)} className={inputClass} placeholder="e.g. 5000" /></div>
+              <div><label className="block text-sm font-semibold text-slate-700 mb-2">Avg Call Duration (sec)</label><input type="number" value={callDuration} onChange={(e) => setCallDuration(e.target.value)} className={inputClass} placeholder="e.g. 120" /></div>
+              <div><label className="block text-sm font-semibold text-slate-700 mb-2">Pickup Rate (%)</label><input type="number" value={pickupRate} onChange={(e) => setPickupRate(e.target.value)} className={inputClass} placeholder="e.g. 15" /></div>
             </div>
 
             <button onClick={handleCalculate} className={buttonClass}>Calculate Requirements</button>
@@ -169,10 +171,7 @@ export default function App() {
                 </div>
                 <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-2xl text-center shadow-inner">
                   <p className="text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wide">Streaming Channels</p>
-                  {/* Reusing CountUp but overriding the color for variety */}
-                  <span className="text-indigo-600 font-extrabold text-5xl">
-                    <CountUp to={results.channels} />
-                  </span>
+                  <span className="text-indigo-600 font-extrabold text-5xl"><CountUp to={results.channels} /></span>
                 </div>
               </div>
             )}
@@ -201,25 +200,15 @@ export default function App() {
       <div className={pageBg}>
         <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-blue-600 mb-8 flex items-center font-medium transition-colors">← Back to Dashboard</button>
         <div className="max-w-xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">LA Pool Allocation</h1>
-          </div>
+          <div className="mb-8"><h1 className="text-2xl font-bold text-slate-900">LA Pool Allocation</h1></div>
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Active allocations of <span className="text-blue-600">Part-A</span>?</label>
-              <input type="number" value={partAAllocations} onChange={(e) => setPartAAllocations(e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Allocations of <span className="text-blue-600">Part-B</span>?</label>
-              <input type="number" value={partBAllocations} onChange={(e) => setPartBAllocations(e.target.value)} className={inputClass} />
-            </div>
+            <div><label className="block text-sm font-semibold text-slate-700 mb-2">Active allocations of <span className="text-blue-600">Part-A</span>?</label><input type="number" value={partAAllocations} onChange={(e) => setPartAAllocations(e.target.value)} className={inputClass} /></div>
+            <div><label className="block text-sm font-semibold text-slate-700 mb-2">Allocations of <span className="text-blue-600">Part-B</span>?</label><input type="number" value={partBAllocations} onChange={(e) => setPartBAllocations(e.target.value)} className={inputClass} /></div>
             <button onClick={handleCalculate} className={buttonClass}>Calculate Required Allocation</button>
             {finalResult !== null && (
               <div className="mt-8 pt-8 border-t border-slate-100 text-center animate-fade-in">
                 <p className="text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wide">Result</p>
-                <div className="px-10 py-6 inline-block bg-blue-50 border border-blue-100 rounded-2xl shadow-inner">
-                    <CountUp to={finalResult} />
-                </div>
+                <div className="px-10 py-6 inline-block bg-blue-50 border border-blue-100 rounded-2xl shadow-inner"><CountUp to={finalResult} /></div>
               </div>
             )}
           </div>
@@ -282,10 +271,8 @@ export default function App() {
       const doc = new jsPDF();
       doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(30, 41, 59); 
       doc.text("GP Overview Report", 14, 22);
-      
       doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(100, 116, 139); 
       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
-
       doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(37, 99, 235); 
       doc.text(`Total Overall GP: ${totalGP.toLocaleString('en-IN')} INR`, 14, 45);
 
@@ -448,19 +435,14 @@ export default function App() {
     useEffect(() => {
       if (!activeUser) return;
       
-      // Query Firebase for tasks belonging to the logged-in email
       const q = query(collection(db, 'tasks'), where('userEmail', '==', activeUser));
-      
-      // onSnapshot listens for real-time updates (cross-device sync!)
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const tasksArray = [];
-        querySnapshot.forEach((doc) => {
-          tasksArray.push({ id: doc.id, ...doc.data() });
-        });
+        querySnapshot.forEach((doc) => { tasksArray.push({ id: doc.id, ...doc.data() }); });
         setTasks(tasksArray);
       });
 
-      return () => unsubscribe(); // Cleanup listener when leaving page
+      return () => unsubscribe(); 
     }, [activeUser]);
 
     // --- FIREBASE HANDLERS ---
@@ -469,65 +451,36 @@ export default function App() {
       if (loginEmail.trim()) {
         const email = loginEmail.trim().toLowerCase();
         setActiveUser(email);
-        localStorage.setItem('activeCloudUser', email); // Just remember who is logged in locally
+        localStorage.setItem('activeCloudUser', email); 
       }
     };
 
-    const handleLogout = () => {
-      setActiveUser(null); setLoginEmail(''); setTasks([]);
-      localStorage.removeItem('activeCloudUser');
-    };
+    const handleLogout = () => { setActiveUser(null); setLoginEmail(''); setTasks([]); localStorage.removeItem('activeCloudUser'); };
 
-    // CREATE to Firebase
     const handleAddTask = async (e) => {
       e.preventDefault();
       if (!subject.trim() || !taskSid.trim()) return;
 
       try {
-        await addDoc(collection(db, 'tasks'), {
-          userEmail: activeUser, // Tag it to this user
-          subject,
-          accountSid: taskSid,
-          priority,
-          deadline,
-          notes,
-          completed: false,
-          createdAt: new Date().toISOString()
-        });
-        // Clear form on success
+        await addDoc(collection(db, 'tasks'), { userEmail: activeUser, subject, accountSid: taskSid, priority, deadline, notes, completed: false, createdAt: new Date().toISOString() });
         setSubject(''); setTaskSid(''); setPriority('medium'); setDeadline(''); setNotes('');
-      } catch (error) {
-        console.error("Error adding document: ", error);
-        alert("Failed to save task. Check Firebase permissions!");
-      }
+      } catch (error) { console.error("Error adding document: ", error); alert("Failed to save task. Check Firebase permissions!"); }
     };
 
-    // UPDATE Complete Status to Firebase
     const toggleComplete = async (id, currentStatus) => {
-      try {
-        const taskRef = doc(db, 'tasks', id);
-        await updateDoc(taskRef, { completed: !currentStatus });
-      } catch (error) { console.error("Error updating: ", error); }
+      try { await updateDoc(doc(db, 'tasks', id), { completed: !currentStatus }); } catch (error) { console.error("Error updating: ", error); }
     };
 
-    // DELETE from Firebase
     const deleteTask = async (id) => {
       if (window.confirm("Delete this task permanently from the cloud?")) {
-        try {
-          await deleteDoc(doc(db, 'tasks', id));
-        } catch (error) { console.error("Error deleting: ", error); }
+        try { await deleteDoc(doc(db, 'tasks', id)); } catch (error) { console.error("Error deleting: ", error); }
       }
     };
 
     const startEditing = (task) => { setEditingId(task.id); setEditNotes(task.notes); setEditDeadline(task.deadline); };
     
-    // UPDATE Edits to Firebase
     const saveEdit = async (id) => {
-      try {
-        const taskRef = doc(db, 'tasks', id);
-        await updateDoc(taskRef, { notes: editNotes, deadline: editDeadline });
-        setEditingId(null);
-      } catch (error) { console.error("Error saving edits: ", error); }
+      try { await updateDoc(doc(db, 'tasks', id), { notes: editNotes, deadline: editDeadline }); setEditingId(null); } catch (error) { console.error("Error saving edits: ", error); }
     };
 
     // --- SORTING & FILTERING ---
@@ -538,7 +491,6 @@ export default function App() {
     });
 
     const priorityWeights = { urgent: 4, high: 3, medium: 2, low: 1 };
-    
     const activeTasks = filteredTasks.filter(t => !t.completed).sort((a, b) => priorityWeights[b.priority] - priorityWeights[a.priority]);
     const completedTasks = filteredTasks.filter(t => t.completed).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -552,7 +504,6 @@ export default function App() {
       }
     };
 
-    // --- RENDER VIEWS ---
     if (!activeUser) {
       return (
         <div className={pageBg}>
