@@ -47,98 +47,92 @@ const CountUp = ({ to, prefix = '', suffix = '' }) => {
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
 
-  // Unified global styles for buttons and inputs
+  // --- NEW: GLOBAL SCRATCHPAD STATE ---
+  const [isScratchpadOpen, setIsScratchpadOpen] = useState(false);
+  const [scratchpadText, setScratchpadText] = useState(() => localStorage.getItem('globalScratchpad') || '');
+
+  // Auto-save scratchpad to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('globalScratchpad', scratchpadText);
+  }, [scratchpadText]);
+
+  const pageBg = "min-h-screen bg-slate-50 p-4 md:p-6 lg:p-8 font-sans text-slate-800 w-full";
   const buttonClass = "w-full bg-blue-600 text-white font-semibold py-3 rounded-xl shadow-sm hover:bg-blue-700 hover:shadow-md transition-all duration-200 disabled:opacity-50";
   const buttonSecondaryClass = "w-full bg-white text-slate-800 font-semibold py-3 rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition-all duration-200";
   const inputClass = "w-full p-4 bg-white/80 backdrop-blur-sm border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all";
 
   // --- HOME DASHBOARD ---
   const HomeDashboard = () => (
-    <div className="w-full animate-in fade-in zoom-in duration-500">
-      <header className="mb-12 flex flex-col md:flex-row items-start md:items-end justify-between gap-6 border-b border-slate-200/50 pb-8">
-        <div>
-          <h1 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tight">
-            Simplylife <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Dashboard</span>
-          </h1>
-          <p className="text-slate-500 font-medium mt-3 text-lg">Professional suite for data, analytics, and productivity.</p>
-        </div>
-        <div className="text-sm font-bold text-emerald-700 bg-emerald-100/80 backdrop-blur-sm px-5 py-2.5 rounded-full border border-emerald-200 shadow-sm flex items-center gap-3">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-          </span>
-          Cloud Connected
-        </div>
-      </header>
-      
-      {/* Edge to edge grid utilizing full width */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
-        
-        {/* LA Pool Card */}
-        <div onClick={() => setCurrentPage('la-pool')} className="bg-white/60 backdrop-blur-md p-8 rounded-[2rem] border border-slate-200/50 cursor-pointer hover:bg-white hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden flex flex-col h-full">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-bl-full -z-10 group-hover:scale-125 transition-transform duration-500"></div>
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center mb-6 text-white font-bold text-2xl shadow-lg shadow-blue-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">LA</div>
-          <h2 className="text-2xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors">LA Pool</h2>
-          <p className="text-slate-500 text-sm mt-3 leading-relaxed font-medium flex-1">Calculate required allocations using active Part-A and Part-B inputs.</p>
-        </div>
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 lg:p-12 font-sans text-slate-800 relative overflow-hidden flex flex-col w-full">
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-300/30 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-pulse"></div>
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-300/30 rounded-full mix-blend-multiply filter blur-3xl opacity-60"></div>
+      <div className="absolute -bottom-32 left-1/3 w-[500px] h-[500px] bg-pink-300/30 rounded-full mix-blend-multiply filter blur-3xl opacity-60"></div>
 
-        {/* CPM Card */}
-        <div onClick={() => setCurrentPage('cpm-calculator')} className="bg-white/60 backdrop-blur-md p-8 rounded-[2rem] border border-slate-200/50 cursor-pointer hover:bg-white hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden flex flex-col h-full">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-50 to-pink-50 rounded-bl-full -z-10 group-hover:scale-125 transition-transform duration-500"></div>
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-400 rounded-2xl flex items-center justify-center mb-6 text-white font-bold text-2xl shadow-lg shadow-purple-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">CP</div>
-          <h2 className="text-2xl font-bold text-slate-800 group-hover:text-purple-600 transition-colors">CPM & Channels</h2>
-          <p className="text-slate-500 text-sm mt-3 leading-relaxed font-medium flex-1">Calculate CPM and Streaming Channels needed for your campaigns.</p>
-        </div>
-
-        {/* GP Overview Card */}
-        <div onClick={() => setCurrentPage('gp-overview')} className="bg-white/60 backdrop-blur-md p-8 rounded-[2rem] border border-slate-200/50 cursor-pointer hover:bg-white hover:shadow-2xl hover:shadow-emerald-500/20 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden flex flex-col h-full">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-bl-full -z-10 group-hover:scale-125 transition-transform duration-500"></div>
-          <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-400 rounded-2xl flex items-center justify-center mb-6 text-white font-bold text-2xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300">GP</div>
-          <h2 className="text-2xl font-bold text-slate-800 group-hover:text-emerald-600 transition-colors">GP Overview</h2>
-          <p className="text-slate-500 text-sm mt-3 leading-relaxed font-medium flex-1">Input accounts, track SKUs, view dynamic charts, and export PDF reports.</p>
-        </div>
-
-        {/* Task Manager Card */}
-        <div onClick={() => setCurrentPage('task-manager')} className="bg-slate-900/90 backdrop-blur-md p-8 rounded-[2rem] border border-slate-800 cursor-pointer hover:bg-slate-900 hover:shadow-2xl hover:shadow-indigo-500/40 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden flex flex-col h-full">
-          <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl group-hover:bg-indigo-500/40 transition-all duration-500"></div>
-          <div className="flex justify-between items-start mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-indigo-500/30 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300 border border-indigo-400/30">TM</div>
-            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-black tracking-widest uppercase border border-indigo-500/30 backdrop-blur-sm">Private Sync</span>
+      <div className="relative z-10 w-full">
+        <header className="mb-12 flex flex-col md:flex-row items-start md:items-end justify-between gap-6 border-b border-slate-200/50 pb-8">
+          <div>
+            <h1 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tight">
+              Simplylife <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Dashboard</span>
+            </h1>
+            <p className="text-slate-500 font-medium mt-3 text-lg">Professional suite for data, analytics, and productivity.</p>
           </div>
-          <h2 className="text-2xl font-bold text-white group-hover:text-indigo-300 transition-colors">Task Manager</h2>
-          <p className="text-slate-400 text-sm mt-3 leading-relaxed font-medium flex-1">Persistent cloud-synced to-do list tagged securely to your email.</p>
-        </div>
+          <div className="text-sm font-bold text-emerald-700 bg-emerald-100/80 backdrop-blur-sm px-5 py-2.5 rounded-full border border-emerald-200 shadow-sm flex items-center gap-3">
+            <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span></span>
+            Cloud Connected
+          </div>
+        </header>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+          <div onClick={() => setCurrentPage('la-pool')} className="bg-white/60 backdrop-blur-md p-8 rounded-[2rem] border border-slate-200/50 cursor-pointer hover:bg-white hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden flex flex-col h-full">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-bl-full -z-10 group-hover:scale-125 transition-transform duration-500"></div>
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center mb-6 text-white font-bold text-2xl shadow-lg shadow-blue-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">LA</div>
+            <h2 className="text-2xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors">LA Pool</h2>
+            <p className="text-slate-500 text-sm mt-3 leading-relaxed font-medium flex-1">Calculate required allocations using active Part-A and Part-B inputs.</p>
+          </div>
 
+          <div onClick={() => setCurrentPage('cpm-calculator')} className="bg-white/60 backdrop-blur-md p-8 rounded-[2rem] border border-slate-200/50 cursor-pointer hover:bg-white hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden flex flex-col h-full">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-50 to-pink-50 rounded-bl-full -z-10 group-hover:scale-125 transition-transform duration-500"></div>
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-400 rounded-2xl flex items-center justify-center mb-6 text-white font-bold text-2xl shadow-lg shadow-purple-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">CP</div>
+            <h2 className="text-2xl font-bold text-slate-800 group-hover:text-purple-600 transition-colors">CPM & Channels</h2>
+            <p className="text-slate-500 text-sm mt-3 leading-relaxed font-medium flex-1">Calculate CPM and Streaming Channels needed for your campaigns.</p>
+          </div>
+
+          <div onClick={() => setCurrentPage('gp-overview')} className="bg-white/60 backdrop-blur-md p-8 rounded-[2rem] border border-slate-200/50 cursor-pointer hover:bg-white hover:shadow-2xl hover:shadow-emerald-500/20 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden flex flex-col h-full">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-bl-full -z-10 group-hover:scale-125 transition-transform duration-500"></div>
+            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-400 rounded-2xl flex items-center justify-center mb-6 text-white font-bold text-2xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300">GP</div>
+            <h2 className="text-2xl font-bold text-slate-800 group-hover:text-emerald-600 transition-colors">GP Overview</h2>
+            <p className="text-slate-500 text-sm mt-3 leading-relaxed font-medium flex-1">Input accounts, track SKUs, view dynamic charts, and export PDF reports.</p>
+          </div>
+
+          <div onClick={() => setCurrentPage('task-manager')} className="bg-slate-900/90 backdrop-blur-md p-8 rounded-[2rem] border border-slate-800 cursor-pointer hover:bg-slate-900 hover:shadow-2xl hover:shadow-indigo-500/40 hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden flex flex-col h-full">
+            <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl group-hover:bg-indigo-500/40 transition-all duration-500"></div>
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-indigo-500/30 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300 border border-indigo-400/30">TM</div>
+              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-black tracking-widest uppercase border border-indigo-500/30 backdrop-blur-sm">Private Sync</span>
+            </div>
+            <h2 className="text-2xl font-bold text-white group-hover:text-indigo-300 transition-colors">Task Manager</h2>
+            <p className="text-slate-400 text-sm mt-3 leading-relaxed font-medium flex-1">Persistent cloud-synced to-do list tagged securely to your email.</p>
+          </div>
+        </div>
       </div>
     </div>
   );
 
   // --- TOOL: CPM Calculator ---
   const CPMCalculator = () => {
-    const [campaignHours, setCampaignHours] = useState('');
-    const [callDuration, setCallDuration] = useState('');
-    const [pickupRate, setPickupRate] = useState('');
-    const [callsPerDay, setCallsPerDay] = useState('');
-    const [results, setResults] = useState(null);
-
+    const [campaignHours, setCampaignHours] = useState(''); const [callDuration, setCallDuration] = useState(''); const [pickupRate, setPickupRate] = useState(''); const [callsPerDay, setCallsPerDay] = useState(''); const [results, setResults] = useState(null);
     const handleCalculate = () => {
       const hours = Number(campaignHours); const duration = Number(callDuration); const rate = Number(pickupRate); const calls = Number(callsPerDay);
       if (!hours || !duration || !rate || !calls) { alert("Please fill in all fields with valid numbers."); return; }
-      const cpmNeeded = Math.ceil(calls / (hours * 60));
-      const streamingChannels = cpmNeeded * (rate / 100) * (duration / 60);
+      const cpmNeeded = Math.ceil(calls / (hours * 60)); const streamingChannels = cpmNeeded * (rate / 100) * (duration / 60);
       setResults({ cpm: cpmNeeded, channels: streamingChannels });
     };
 
     return (
       <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-purple-600 mb-8 flex items-center font-bold text-lg transition-colors group">
-          <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Dashboard
-        </button>
+        <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-purple-600 mb-8 flex items-center font-bold text-lg transition-colors group"><span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Dashboard</button>
         <div className="w-full bg-white/70 backdrop-blur-xl p-8 lg:p-12 rounded-[2rem] shadow-xl shadow-purple-500/5 border border-white">
-          <div className="mb-10 border-b border-slate-200/50 pb-6">
-            <h1 className="text-4xl font-bold text-slate-900 mb-2">CPM & Streaming Channels</h1>
-            <p className="text-slate-500 text-lg">Calculate your campaign connectivity requirements instantly.</p>
-          </div>
+          <div className="mb-10 border-b border-slate-200/50 pb-6"><h1 className="text-4xl font-bold text-slate-900 mb-2">CPM & Streaming Channels</h1><p className="text-slate-500 text-lg">Calculate your campaign connectivity requirements instantly.</p></div>
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div><label className="block text-sm font-bold text-slate-700 mb-2">Campaign Hours</label><input type="number" value={campaignHours} onChange={(e) => setCampaignHours(e.target.value)} className={inputClass} placeholder="e.g. 8" /></div>
@@ -147,17 +141,10 @@ export default function App() {
               <div><label className="block text-sm font-bold text-slate-700 mb-2">Pickup Rate (%)</label><input type="number" value={pickupRate} onChange={(e) => setPickupRate(e.target.value)} className={inputClass} placeholder="e.g. 15" /></div>
             </div>
             <div className="max-w-md"><button onClick={handleCalculate} className={buttonClass}>Calculate Requirements</button></div>
-
             {results && (
               <div className="mt-8 pt-8 border-t border-slate-200/50 grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in zoom-in duration-500">
-                <div className="p-10 bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/50 rounded-3xl flex flex-col justify-center shadow-inner">
-                  <p className="text-sm font-bold text-blue-600/80 mb-2 uppercase tracking-widest">CPM Needed</p>
-                  <CountUp to={results.cpm} />
-                </div>
-                <div className="p-10 bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200/50 rounded-3xl flex flex-col justify-center shadow-inner">
-                  <p className="text-sm font-bold text-purple-600/80 mb-2 uppercase tracking-widest">Streaming Channels</p>
-                  <span className="text-purple-600 font-extrabold text-5xl"><CountUp to={results.channels} /></span>
-                </div>
+                <div className="p-10 bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/50 rounded-3xl flex flex-col justify-center shadow-inner"><p className="text-sm font-bold text-blue-600/80 mb-2 uppercase tracking-widest">CPM Needed</p><CountUp to={results.cpm} /></div>
+                <div className="p-10 bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200/50 rounded-3xl flex flex-col justify-center shadow-inner"><p className="text-sm font-bold text-purple-600/80 mb-2 uppercase tracking-widest">Streaming Channels</p><span className="text-purple-600 font-extrabold text-5xl"><CountUp to={results.channels} /></span></div>
               </div>
             )}
           </div>
@@ -168,10 +155,7 @@ export default function App() {
 
   // --- TOOL: LA Pool Calculator ---
   const LAPoolCalculator = () => {
-    const [partAAllocations, setPartAAllocations] = useState('');
-    const [partBAllocations, setPartBAllocations] = useState('');
-    const [finalResult, setFinalResult] = useState(null);
-
+    const [partAAllocations, setPartAAllocations] = useState(''); const [partBAllocations, setPartBAllocations] = useState(''); const [finalResult, setFinalResult] = useState(null);
     const handleCalculate = () => {
       const a = Number(partAAllocations); const b = Number(partBAllocations);
       if (isNaN(a) || isNaN(b) || (partAAllocations === '' && partBAllocations === '')) { setFinalResult(null); alert("Please enter valid numbers."); return; }
@@ -180,9 +164,7 @@ export default function App() {
 
     return (
       <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-blue-600 mb-8 flex items-center font-bold text-lg transition-colors group">
-          <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Dashboard
-        </button>
+        <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-blue-600 mb-8 flex items-center font-bold text-lg transition-colors group"><span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Dashboard</button>
         <div className="w-full bg-white/70 backdrop-blur-xl p-8 lg:p-12 rounded-[2rem] shadow-xl shadow-blue-500/5 border border-white">
           <div className="mb-10 border-b border-slate-200/50 pb-6"><h1 className="text-4xl font-bold text-slate-900">LA Pool Allocation</h1></div>
           <div className="space-y-8">
@@ -192,10 +174,7 @@ export default function App() {
             </div>
             <div className="max-w-md"><button onClick={handleCalculate} className={buttonClass}>Calculate Required Allocation</button></div>
             {finalResult !== null && (
-              <div className="mt-8 pt-8 border-t border-slate-200/50 animate-in fade-in zoom-in duration-500">
-                <p className="text-sm font-bold text-blue-600/80 mb-3 uppercase tracking-widest">Total Numbers required (inclusive of buffer)</p>
-                <div className="px-12 py-8 inline-block bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/50 rounded-3xl shadow-inner"><CountUp to={finalResult} /></div>
-              </div>
+              <div className="mt-8 pt-8 border-t border-slate-200/50 animate-in fade-in zoom-in duration-500"><p className="text-sm font-bold text-blue-600/80 mb-3 uppercase tracking-widest">Final Result</p><div className="px-12 py-8 inline-block bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/50 rounded-3xl shadow-inner"><CountUp to={finalResult} /></div></div>
             )}
           </div>
         </div>
@@ -205,13 +184,7 @@ export default function App() {
 
   // --- TOOL: GP Overview ---
   const GPOverview = () => {
-    const [view, setView] = useState('entry');
-    const [records, setRecords] = useState([]); 
-    const [entity, setEntity] = useState('');
-    const [accountSid, setAccountSid] = useState('');
-    const [skuInputs, setSkuInputs] = useState([{ id: 1, name: '', gp: '' }]);
-    const [lastMonthData, setLastMonthData] = useState({});
-    const [showComparisonResult, setShowComparisonResult] = useState(false);
+    const [view, setView] = useState('entry'); const [records, setRecords] = useState([]); const [entity, setEntity] = useState(''); const [accountSid, setAccountSid] = useState(''); const [skuInputs, setSkuInputs] = useState([{ id: 1, name: '', gp: '' }]); const [lastMonthData, setLastMonthData] = useState({}); const [showComparisonResult, setShowComparisonResult] = useState(false);
 
     const addSkuRow = () => setSkuInputs([...skuInputs, { id: Date.now(), name: '', gp: '' }]);
     const removeSkuRow = (id) => setSkuInputs(skuInputs.filter(sku => sku.id !== id));
@@ -221,8 +194,7 @@ export default function App() {
       if (!entity || !accountSid) { alert("Please provide Entity and Account SID."); return false; }
       const validSkus = skuInputs.filter(s => s.name.trim() !== '' && s.gp !== '');
       if (validSkus.length === 0) { alert("Please add at least one valid SKU."); return false; }
-      const newRecords = validSkus.map(s => ({ entity, accountSid, sku: s.name, gp: parseFloat(s.gp) }));
-      setRecords([...records, ...newRecords]); return true;
+      const newRecords = validSkus.map(s => ({ entity, accountSid, sku: s.name, gp: parseFloat(s.gp) })); setRecords([...records, ...newRecords]); return true;
     };
 
     const handleSaveAndNext = () => { if (saveCurrentForm()) { setAccountSid(''); setSkuInputs([{ id: Date.now(), name: '', gp: '' }]); } };
@@ -235,8 +207,7 @@ export default function App() {
       acc[r.entity].sids[r.accountSid] += r.gp; acc[r.entity].total += r.gp; return acc;
     }, {});
 
-    const pieLabels = Object.keys(entityGroups);
-    const pieDataValues = Object.values(entityGroups).map(ent => ent.total);
+    const pieLabels = Object.keys(entityGroups); const pieDataValues = Object.values(entityGroups).map(ent => ent.total);
     const bgColors = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#14B8A6'];
     const pieData = { labels: pieLabels, datasets: [{ data: pieDataValues, backgroundColor: bgColors.slice(0, pieLabels.length), borderWidth: 0 }] };
 
@@ -245,27 +216,18 @@ export default function App() {
     const exportToPDF = () => {
       if (records.length === 0) { alert("No data to export."); return; }
       const doc = new jsPDF();
-      doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(15, 23, 42); 
-      doc.text("GP Overview Report", 14, 22);
-      doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(100, 116, 139); 
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
-      doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(16, 185, 129); 
-      doc.text(`Total Overall GP: ${totalGP.toLocaleString('en-IN')} INR`, 14, 45);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(15, 23, 42); doc.text("GP Overview Report", 14, 22);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(100, 116, 139); doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+      doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(16, 185, 129); doc.text(`Total Overall GP: ${totalGP.toLocaleString('en-IN')} INR`, 14, 45);
 
-      const chartCanvas = document.getElementById('gp-pie-chart');
-      let currentY = 55; 
-      if (chartCanvas) {
-        doc.setFontSize(12); doc.setTextColor(15, 23, 42); doc.text("Entity Contribution Breakdown:", 14, currentY);
-        const chartImg = chartCanvas.toDataURL("image/png", 1.0); doc.addImage(chartImg, 'PNG', 14, currentY + 5, 80, 80); 
-        currentY = 150; 
-      }
+      const chartCanvas = document.getElementById('gp-pie-chart'); let currentY = 55; 
+      if (chartCanvas) { doc.setFontSize(12); doc.setTextColor(15, 23, 42); doc.text("Entity Contribution Breakdown:", 14, currentY); const chartImg = chartCanvas.toDataURL("image/png", 1.0); doc.addImage(chartImg, 'PNG', 14, currentY + 5, 80, 80); currentY = 150; }
 
       const tableRows = [];
       Object.entries(entityGroups).forEach(([entName, entData]) => {
         tableRows.push([{ content: entName, colSpan: 2, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
         Object.entries(entData.sids).forEach(([sid, gp]) => { tableRows.push([`SID: ${sid}`, `${gp.toLocaleString('en-IN')} INR`]); });
       });
-
       autoTable(doc, { startY: currentY, head: [['Account Description', 'Gross Profit (GP)']], body: tableRows, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255 }, styles: { fontSize: 10, cellPadding: 5 } });
       doc.save('GP_Overview_Report.pdf');
     };
@@ -273,9 +235,7 @@ export default function App() {
     return (
       <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex justify-between items-center mb-8 border-b border-slate-200/50 pb-4">
-          <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-emerald-600 flex items-center font-bold text-lg transition-colors group">
-            <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Dashboard
-          </button>
+          <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-emerald-600 flex items-center font-bold text-lg transition-colors group"><span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Dashboard</button>
           {records.length > 0 && view === 'entry' && (<span className="text-sm font-bold text-emerald-700 bg-emerald-100/80 backdrop-blur-sm px-4 py-2 rounded-full border border-emerald-200">{records.length} SKUs Logged</span>)}
         </div>
 
@@ -309,15 +269,12 @@ export default function App() {
           <div className="w-full space-y-8 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-12 rounded-[2rem] shadow-xl flex flex-col justify-center items-center text-center">
-                <h3 className="text-emerald-100 font-bold text-xl uppercase tracking-widest mb-4">Total Overall GP</h3>
-                <div className="text-6xl md:text-7xl font-black">₹{totalGP.toLocaleString('en-IN')}</div>
+                <h3 className="text-emerald-100 font-bold text-xl uppercase tracking-widest mb-4">Total Overall GP</h3><div className="text-6xl md:text-7xl font-black">₹{totalGP.toLocaleString('en-IN')}</div>
               </div>
               <div className="bg-white/70 backdrop-blur-xl p-10 rounded-[2rem] shadow-xl shadow-emerald-500/5 border border-white flex flex-col items-center">
-                <h3 className="font-bold text-slate-900 mb-6 w-full text-left text-2xl">Entity Contribution</h3>
-                <div className="w-full max-w-sm aspect-square"><Pie id="gp-pie-chart" data={pieData} options={{ maintainAspectRatio: false }} /></div>
+                <h3 className="font-bold text-slate-900 mb-6 w-full text-left text-2xl">Entity Contribution</h3><div className="w-full max-w-sm aspect-square"><Pie id="gp-pie-chart" data={pieData} options={{ maintainAspectRatio: false }} /></div>
               </div>
             </div>
-            
             <div className="bg-white/70 backdrop-blur-xl p-8 lg:p-12 rounded-[2rem] shadow-xl shadow-emerald-500/5 border border-white">
               <h2 className="text-3xl font-bold text-slate-900 border-b border-slate-200/50 pb-6 mb-8">Entity & Account Breakdown</h2>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -337,7 +294,6 @@ export default function App() {
                   </div>
                 ))}
               </div>
-              
               <div className="flex flex-col sm:flex-row gap-6 mt-12 pt-8 border-t border-slate-200/50 max-w-2xl">
                 <button onClick={() => setView('compare')} className={`${buttonClass} !bg-slate-800 hover:!bg-slate-900`}>Compare vs. Last Month</button>
                 <button onClick={exportToPDF} className="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-sm hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 text-lg">📄 Download PDF</button>
@@ -393,8 +349,14 @@ export default function App() {
     const [loginEmail, setLoginEmail] = useState('');
     const [activeUser, setActiveUser] = useState(() => localStorage.getItem('activeCloudUser') || null);
     const [tasks, setTasks] = useState([]);
+    
     const [subject, setSubject] = useState(''); const [taskSid, setTaskSid] = useState(''); const [priority, setPriority] = useState('medium'); const [deadline, setDeadline] = useState(''); const [notes, setNotes] = useState('');
-    const [searchTerm, setSearchTerm] = useState(''); const [showHistory, setShowHistory] = useState(false);
+    
+    const [searchTerm, setSearchTerm] = useState(''); 
+    const [showHistory, setShowHistory] = useState(false);
+    const [activeFilter, setActiveFilter] = useState('all'); 
+    
+    const [taskToDelete, setTaskToDelete] = useState(null);
     const [editingId, setEditingId] = useState(null); const [editNotes, setEditNotes] = useState(''); const [editDeadline, setEditDeadline] = useState('');
 
     useEffect(() => {
@@ -408,17 +370,37 @@ export default function App() {
 
     const handleLogin = (e) => { e.preventDefault(); if (loginEmail.trim()) { const email = loginEmail.trim().toLowerCase(); setActiveUser(email); localStorage.setItem('activeCloudUser', email); } };
     const handleLogout = () => { setActiveUser(null); setLoginEmail(''); setTasks([]); localStorage.removeItem('activeCloudUser'); };
+    
     const handleAddTask = async (e) => {
       e.preventDefault(); if (!subject.trim() || !taskSid.trim()) return;
       try { await addDoc(collection(db, 'tasks'), { userEmail: activeUser, subject, accountSid: taskSid, priority, deadline, notes, completed: false, createdAt: new Date().toISOString() }); setSubject(''); setTaskSid(''); setPriority('medium'); setDeadline(''); setNotes(''); } 
       catch (error) { alert("Failed to save. Check Firebase!"); }
     };
+    
     const toggleComplete = async (id, currentStatus) => { try { await updateDoc(doc(db, 'tasks', id), { completed: !currentStatus }); } catch (error) {} };
-    const deleteTask = async (id) => { if (window.confirm("Delete permanently?")) { try { await deleteDoc(doc(db, 'tasks', id)); } catch (error) {} } };
+    
+    const confirmDelete = async () => {
+      if (taskToDelete) { try { await deleteDoc(doc(db, 'tasks', taskToDelete)); setTaskToDelete(null); } catch (error) {} }
+    };
+
     const startEditing = (task) => { setEditingId(task.id); setEditNotes(task.notes); setEditDeadline(task.deadline); };
     const saveEdit = async (id) => { try { await updateDoc(doc(db, 'tasks', id), { notes: editNotes, deadline: editDeadline }); setEditingId(null); } catch (error) {} };
 
-    const filteredTasks = tasks.filter(t => { if (!searchTerm) return true; const term = searchTerm.toLowerCase(); return (t.subject.toLowerCase().includes(term) || (t.accountSid && t.accountSid.toLowerCase().includes(term)) || (t.notes && t.notes.toLowerCase().includes(term))); });
+    const getTodayString = () => {
+      const d = new Date(); const month = `${d.getMonth() + 1}`.padStart(2, '0'); const day = `${d.getDate()}`.padStart(2, '0');
+      return `${d.getFullYear()}-${month}-${day}`;
+    };
+
+    const filteredTasks = tasks.filter(t => {
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        if (!(t.subject.toLowerCase().includes(term) || (t.accountSid && t.accountSid.toLowerCase().includes(term)) || (t.notes && t.notes.toLowerCase().includes(term)))) return false;
+      }
+      if (activeFilter === 'urgent' && t.priority !== 'urgent') return false;
+      if (activeFilter === 'today' && t.deadline !== getTodayString()) return false;
+      return true;
+    });
+
     const priorityWeights = { urgent: 4, high: 3, medium: 2, low: 1 };
     const activeTasks = filteredTasks.filter(t => !t.completed).sort((a, b) => priorityWeights[b.priority] - priorityWeights[a.priority]);
     const completedTasks = filteredTasks.filter(t => t.completed).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -432,8 +414,7 @@ export default function App() {
         <div className="w-full animate-in fade-in duration-500">
           <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-indigo-600 mb-8 flex items-center font-bold text-lg transition-colors group"><span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Dashboard</button>
           <div className="max-w-md mx-auto bg-white/80 backdrop-blur-xl p-10 rounded-[2.5rem] shadow-2xl shadow-indigo-500/10 border border-white mt-10">
-            <h1 className="text-4xl font-black text-slate-900 mb-2">Private Access</h1>
-            <p className="text-slate-500 mb-10 text-base font-medium">Log in to sync your tasks across devices instantly.</p>
+            <h1 className="text-4xl font-black text-slate-900 mb-2">Private Access</h1><p className="text-slate-500 mb-10 text-base font-medium">Log in to sync your tasks across devices instantly.</p>
             <form onSubmit={handleLogin} className="space-y-6">
               <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} className={inputClass} placeholder="e.g. akshay@workspace.com" required />
               <button type="submit" className={`${buttonClass} !bg-indigo-600 hover:!bg-indigo-700 !py-4 text-lg`}>Connect to Cloud</button>
@@ -444,7 +425,22 @@ export default function App() {
     }
 
     return (
-      <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+        
+        {taskToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white/90 backdrop-blur-xl p-8 md:p-10 rounded-[2.5rem] shadow-2xl border border-white max-w-md w-full text-center animate-in zoom-in-95 duration-200">
+              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6"><span className="text-red-500 text-3xl">⚠️</span></div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-3">Delete this task?</h3>
+              <p className="text-slate-500 mb-8">This action cannot be undone. The task will be permanently removed from the cloud.</p>
+              <div className="flex gap-4 w-full">
+                <button onClick={() => setTaskToDelete(null)} className={buttonSecondaryClass}>Cancel</button>
+                <button onClick={confirmDelete} className={`${buttonClass} !bg-red-500 hover:!bg-red-600`}>Yes, Delete</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-slate-200/50 pb-6">
           <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-indigo-600 flex items-center font-bold text-lg transition-colors group"><span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Dashboard</button>
           <div className="flex items-center gap-4 bg-white/60 backdrop-blur-md px-5 py-2.5 rounded-full border border-slate-200/50">
@@ -471,15 +467,22 @@ export default function App() {
           </div>
 
           <div className="xl:col-span-3 flex flex-col h-[85vh]">
-            <div className="mb-6"><input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`${inputClass} !py-5 text-lg shadow-md border-transparent bg-white`} placeholder="🔍 Search tasks by Subject, SID, or Notes..." /></div>
+            <div className="mb-4"><input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`${inputClass} !py-5 text-lg shadow-md border-transparent bg-white`} placeholder="🔍 Search tasks by Subject, SID, or Notes..." /></div>
+            
+            <div className="flex flex-wrap gap-3 mb-6">
+              <button onClick={() => setActiveFilter('all')} className={`px-5 py-2 rounded-full font-bold text-sm transition-all ${activeFilter === 'all' ? 'bg-slate-800 text-white shadow-md' : 'bg-white/60 text-slate-600 hover:bg-white border border-slate-200'}`}>All Tasks</button>
+              <button onClick={() => setActiveFilter('urgent')} className={`px-5 py-2 rounded-full font-bold text-sm transition-all ${activeFilter === 'urgent' ? 'bg-red-500 text-white shadow-md shadow-red-500/20' : 'bg-white/60 text-red-600 hover:bg-white border border-red-200/50'}`}>🔥 Urgent Only</button>
+              <button onClick={() => setActiveFilter('today')} className={`px-5 py-2 rounded-full font-bold text-sm transition-all ${activeFilter === 'today' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'bg-white/60 text-blue-600 hover:bg-white border border-blue-200/50'}`}>📅 Due Today</button>
+            </div>
+
             <div className="flex gap-8 mb-6 border-b border-slate-200/50 pb-2">
               <button onClick={() => setShowHistory(false)} className={`text-xl font-bold transition-colors pb-3 ${!showHistory ? 'text-indigo-600 border-b-4 border-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>Priority Board ({activeTasks.length})</button>
-              <button onClick={() => setShowHistory(true)} className={`text-xl font-bold transition-colors pb-3 ${showHistory ? 'text-emerald-600 border-b-4 border-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}>Completed History ({completedTasks.length})</button>
+              <button onClick={() => setShowHistory(true)} className={`text-xl font-bold transition-colors pb-3 ${showHistory ? 'text-emerald-600 border-b-4 border-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}>Completed ({completedTasks.length})</button>
             </div>
 
             <div className="overflow-y-auto pr-4 space-y-5 pb-10 flex-1 custom-scrollbar">
               {!showHistory ? (
-                activeTasks.length === 0 ? ( <div className="bg-white/50 backdrop-blur-sm border-2 border-dashed border-slate-300 rounded-[2rem] p-16 text-center text-slate-500 font-medium text-lg">{searchTerm ? "No active tasks match your search." : "Your cloud queue is empty."}</div> ) : (
+                activeTasks.length === 0 ? ( <div className="bg-white/50 backdrop-blur-sm border-2 border-dashed border-slate-300 rounded-[2rem] p-16 text-center text-slate-500 font-medium text-lg">{searchTerm || activeFilter !== 'all' ? "No tasks match your current filters." : "Your cloud queue is empty."}</div> ) : (
                   activeTasks.map(task => (
                     <div key={task.id} className="bg-white/90 backdrop-blur-md p-8 rounded-[2rem] border border-white shadow-xl shadow-slate-200/50 hover:shadow-indigo-500/10 transition-all duration-300">
                       <div className="flex gap-6 items-start">
@@ -496,7 +499,7 @@ export default function App() {
                               {task.notes && (<div className="bg-slate-50 p-5 rounded-2xl text-base text-slate-700 border border-slate-100 mb-5 whitespace-pre-wrap">{task.notes}</div>)}
                               <div className="flex gap-4">
                                 <button onClick={() => startEditing(task)} className="text-sm text-indigo-600 font-bold hover:underline bg-indigo-50 px-5 py-2.5 rounded-xl">Edit / Add Update</button>
-                                <button onClick={() => deleteTask(task.id)} className="text-sm text-red-500 font-bold hover:underline bg-red-50 px-5 py-2.5 rounded-xl">Delete</button>
+                                <button onClick={() => setTaskToDelete(task.id)} className="text-sm text-red-500 font-bold hover:underline bg-red-50 px-5 py-2.5 rounded-xl">Delete</button>
                               </div>
                             </>
                           ) : (
@@ -515,7 +518,7 @@ export default function App() {
                   ))
                 )
               ) : (
-                completedTasks.length === 0 ? ( <div className="bg-white/50 backdrop-blur-sm border-2 border-dashed border-slate-300 rounded-[2rem] p-16 text-center text-slate-500 font-medium text-lg">{searchTerm ? "No completed tasks match your search." : "You haven't completed any cloud tasks yet."}</div> ) : (
+                completedTasks.length === 0 ? ( <div className="bg-white/50 backdrop-blur-sm border-2 border-dashed border-slate-300 rounded-[2rem] p-16 text-center text-slate-500 font-medium text-lg">{searchTerm || activeFilter !== 'all' ? "No completed tasks match your filters." : "You haven't completed any cloud tasks yet."}</div> ) : (
                   completedTasks.map(task => (
                     <div key={task.id} className="bg-slate-50/80 p-8 rounded-[2rem] border border-slate-200/50 opacity-70 hover:opacity-100 transition-opacity duration-300">
                       <div className="flex gap-6 items-start">
@@ -526,7 +529,7 @@ export default function App() {
                             <span className="text-xs font-black uppercase px-4 py-2 rounded-xl border bg-slate-200 text-slate-500 border-slate-300">Completed</span>
                           </div>
                           {task.notes && (<div className="bg-white p-5 rounded-2xl text-base text-slate-500 border border-slate-200 mb-5 whitespace-pre-wrap mt-3">{task.notes}</div>)}
-                          <div className="flex gap-3"><button onClick={() => deleteTask(task.id)} className="text-sm text-red-500 font-bold hover:underline bg-red-50 px-5 py-2.5 rounded-xl">Delete Permanently</button></div>
+                          <div className="flex gap-3"><button onClick={() => setTaskToDelete(task.id)} className="text-sm text-red-500 font-bold hover:underline bg-red-50 px-5 py-2.5 rounded-xl">Delete Permanently</button></div>
                         </div>
                       </div>
                     </div>
@@ -542,10 +545,39 @@ export default function App() {
 
   return (
     <div className="min-h-screen font-sans text-slate-800 relative w-full bg-slate-50 overflow-x-hidden selection:bg-blue-200 selection:text-blue-900">
-      {/* GLOBAL ANIMATED BACKGROUND - Shows on ALL pages */}
+      
+      {/* GLOBAL ANIMATED BACKGROUND */}
       <div className="fixed top-0 left-0 w-[600px] h-[600px] bg-blue-300/30 rounded-full mix-blend-multiply filter blur-[100px] opacity-60 animate-pulse pointer-events-none z-0"></div>
       <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-purple-300/30 rounded-full mix-blend-multiply filter blur-[100px] opacity-60 pointer-events-none z-0"></div>
       <div className="fixed -bottom-40 left-1/4 w-[600px] h-[600px] bg-emerald-300/20 rounded-full mix-blend-multiply filter blur-[100px] opacity-60 pointer-events-none z-0"></div>
+
+      {/* --- NEW: GLOBAL SCRATCHPAD FAB & PANEL --- */}
+      <div className="fixed bottom-8 right-8 z-50">
+        <button 
+          onClick={() => setIsScratchpadOpen(!isScratchpadOpen)} 
+          className={`flex items-center justify-center w-16 h-16 rounded-full shadow-2xl transition-all duration-300 ${isScratchpadOpen ? 'bg-slate-800 rotate-90' : 'bg-blue-600 hover:bg-blue-700 hover:scale-110'}`}
+        >
+          <span className="text-2xl text-white">{isScratchpadOpen ? '✕' : '📝'}</span>
+        </button>
+      </div>
+
+      <div className={`fixed top-0 right-0 h-full w-full md:w-96 bg-white/80 backdrop-blur-3xl shadow-[rgba(0,0,0,0.1)_0px_0px_50px] z-40 transform transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border-l border-white/50 ${isScratchpadOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-8 h-full flex flex-col pt-12">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-black text-slate-900">Quick Notes</h2>
+          </div>
+          <textarea
+            value={scratchpadText}
+            onChange={(e) => setScratchpadText(e.target.value)}
+            placeholder="Jot down quick notes, SIDs, or numbers here. &#10;&#10;Everything is auto-saved to your browser instantly..."
+            className="flex-1 w-full bg-slate-50/50 border border-slate-200/50 rounded-3xl p-6 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-700 leading-relaxed text-lg"
+          />
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm font-bold text-slate-400 bg-slate-100/50 py-3 rounded-xl border border-slate-200/50">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Auto-saved locally
+          </div>
+        </div>
+      </div>
+      {/* --- END GLOBAL SCRATCHPAD --- */}
 
       {/* GLOBAL CONTENT WRAPPER */}
       <div className="relative z-10 w-full min-h-screen p-4 md:p-8 lg:p-12 xl:p-16">
