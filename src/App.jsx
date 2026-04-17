@@ -4,92 +4,55 @@ import { Pie } from 'react-chartjs-2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// --- NEW FIREBASE IMPORTS ---
-import { db } from './firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot } from 'firebase/firestore';
+// FIREBASE TOOLS
+import { db, auth } from './firebase';
+import { 
+  collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot 
+} from 'firebase/firestore';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  onAuthStateChanged, 
+  signOut 
+} from 'firebase/auth';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-// --- ANIMATION HELPER ---
-const CountUp = ({ to, prefix = '', suffix = '' }) => {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    if (isNaN(to) || to === null) {
-      setCount(0); return;
-    }
-    let start = 0;
-    const end = parseFloat(to);
-    const duration = 1200; 
-    const increment = end / (duration / 16); 
-
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= end) {
-        setCount(Math.round(end)); 
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(start));
-      }
-    }, 16);
-    return () => clearInterval(timer);
-  }, [to]);
-
-  return (
-    <span className="text-blue-600 font-extrabold text-5xl">
-      {prefix}{count.toLocaleString('en-IN')}{suffix}
-    </span>
-  );
-};
-
-// --- THE MAIN APPLICATION ---
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authMode, setAuthMode] = useState('login'); 
   const [currentPage, setCurrentPage] = useState('home');
 
+  // Styles
   const pageBg = "min-h-screen bg-slate-50 p-10 font-sans text-slate-800";
-  const buttonClass = "w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-sm hover:bg-blue-700 hover:shadow-md transition-all duration-200 disabled:opacity-50";
-  const buttonSecondaryClass = "w-full bg-slate-200 text-slate-800 font-semibold py-3 rounded-lg shadow-sm hover:bg-slate-300 transition-all duration-200";
-  const inputClass = "w-full p-3 bg-white border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow";
+  const cardClass = "bg-white p-6 rounded-xl border border-slate-200 shadow-sm transition-all";
+  const buttonClass = "w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-sm hover:bg-blue-700 transition-all";
+  const inputClass = "w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none mb-4";
 
-  // --- COMPONENT: Home Dashboard ---
-  const HomeDashboard = () => (
-    <div className={pageBg}>
-      <header className="mb-10 border-b border-slate-200 pb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-900">My Workspace</h1>
-        <div className="text-sm font-medium text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">
-          Status: Cloud Connected ☁️
-        </div>
-      </header>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div onClick={() => setCurrentPage('la-pool')} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-pointer transition-all duration-200 group">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">LA Pool Calculator</h2>
-            <span className="text-slate-400 group-hover:text-blue-500 transition-colors">→</span>
-          </div>
-          <p className="text-slate-600 text-sm leading-relaxed">Calculate required allocations using active Part-A and Part-B inputs.</p>
-        </div>
+  // 1. Listen for Login/Logout
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
-        <div onClick={() => setCurrentPage('gp-overview')} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-pointer transition-all duration-200 group">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">GP Overview</h2>
-            <span className="text-slate-400 group-hover:text-blue-500 transition-colors">→</span>
-          </div>
-          <p className="text-slate-600 text-sm leading-relaxed">Input accounts, track SKUs, view charts, and download PDF reports.</p>
-        </div>
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    try {
+      if (authMode === 'signup') {
+        await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+    } catch (error) { alert(error.message); }
+  };
 
-        <div onClick={() => setCurrentPage('task-manager')} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-pointer transition-all duration-200 group">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">Task Manager</h2>
-            <span className="text-slate-400 group-hover:text-blue-500 transition-colors">→</span>
-          </div>
-          <p className="text-slate-600 text-sm leading-relaxed">Persistent cloud-synced to-do list tagged to your email.</p>
-        </div>
-      </div>
-    </div>
-  );
+  const handleLogout = () => signOut(auth);
 
-  // --- COMPONENT: LA Pool Calculator ---
+  // --- 1. LA POOL CALCULATOR (PUBLIC) ---
   const LAPoolCalculator = () => {
     const [partAAllocations, setPartAAllocations] = useState('');
     const [partBAllocations, setPartBAllocations] = useState('');
@@ -135,8 +98,8 @@ export default function App() {
     );
   };
 
-  // --- COMPONENT: GP Overview ---
-  const GPOverview = () => {
+  // --- 2. GP OVERVIEW (PUBLIC) ---
+const GPOverview = () => {
     const [view, setView] = useState('entry');
     const [records, setRecords] = useState([]); 
 
@@ -330,147 +293,48 @@ export default function App() {
       </div>
     );
   };
-
-  // --- REWRITTEN COMPONENT: FIREBASE CLOUD TASK MANAGER ---
+  // --- 3. PRIVATE TASK MANAGER ---
   const TaskManager = () => {
-    const [loginEmail, setLoginEmail] = useState('');
-    const [activeUser, setActiveUser] = useState(() => localStorage.getItem('activeCloudUser') || null);
     const [tasks, setTasks] = useState([]);
-    
-    // Task Form State
     const [subject, setSubject] = useState('');
-    const [taskSid, setTaskSid] = useState(''); 
-    const [priority, setPriority] = useState('medium');
-    const [deadline, setDeadline] = useState('');
-    const [notes, setNotes] = useState('');
-    
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showHistory, setShowHistory] = useState(false);
-    
-    const [editingId, setEditingId] = useState(null);
-    const [editNotes, setEditNotes] = useState('');
-    const [editDeadline, setEditDeadline] = useState('');
 
-    // --- FIREBASE REAL-TIME SYNC ---
     useEffect(() => {
-      if (!activeUser) return;
-      
-      // Query Firebase for tasks belonging to the logged-in email
-      const q = query(collection(db, 'tasks'), where('userEmail', '==', activeUser));
-      
-      // onSnapshot listens for real-time updates (cross-device sync!)
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const tasksArray = [];
-        querySnapshot.forEach((doc) => {
-          tasksArray.push({ id: doc.id, ...doc.data() });
-        });
-        setTasks(tasksArray);
+      if (!user) return;
+      const q = query(collection(db, 'tasks'), where('userId', '==', user.uid));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        setTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
+      return () => unsubscribe();
+    }, [user]);
 
-      return () => unsubscribe(); // Cleanup listener when leaving page
-    }, [activeUser]);
-
-    // --- FIREBASE HANDLERS ---
-    const handleLogin = (e) => {
-      e.preventDefault();
-      if (loginEmail.trim()) {
-        const email = loginEmail.trim().toLowerCase();
-        setActiveUser(email);
-        localStorage.setItem('activeCloudUser', email); // Just remember who is logged in locally
-      }
-    };
-
-    const handleLogout = () => {
-      setActiveUser(null); setLoginEmail(''); setTasks([]);
-      localStorage.removeItem('activeCloudUser');
-    };
-
-    // CREATE to Firebase
     const handleAddTask = async (e) => {
       e.preventDefault();
-      if (!subject.trim() || !taskSid.trim()) return;
-
-      try {
-        await addDoc(collection(db, 'tasks'), {
-          userEmail: activeUser, // Tag it to this user
-          subject,
-          accountSid: taskSid,
-          priority,
-          deadline,
-          notes,
-          completed: false,
-          createdAt: new Date().toISOString()
-        });
-        // Clear form on success
-        setSubject(''); setTaskSid(''); setPriority('medium'); setDeadline(''); setNotes('');
-      } catch (error) {
-        console.error("Error adding document: ", error);
-        alert("Failed to save task. Check Firebase permissions!");
-      }
+      await addDoc(collection(db, 'tasks'), {
+        userId: user.uid,
+        userEmail: user.email,
+        subject,
+        completed: false,
+        createdAt: new Date().toISOString()
+      });
+      setSubject('');
     };
 
-    // UPDATE Complete Status to Firebase
-    const toggleComplete = async (id, currentStatus) => {
-      try {
-        const taskRef = doc(db, 'tasks', id);
-        await updateDoc(taskRef, { completed: !currentStatus });
-      } catch (error) { console.error("Error updating: ", error); }
-    };
-
-    // DELETE from Firebase
-    const deleteTask = async (id) => {
-      if (window.confirm("Delete this task permanently from the cloud?")) {
-        try {
-          await deleteDoc(doc(db, 'tasks', id));
-        } catch (error) { console.error("Error deleting: ", error); }
-      }
-    };
-
-    const startEditing = (task) => { setEditingId(task.id); setEditNotes(task.notes); setEditDeadline(task.deadline); };
-    
-    // UPDATE Edits to Firebase
-    const saveEdit = async (id) => {
-      try {
-        const taskRef = doc(db, 'tasks', id);
-        await updateDoc(taskRef, { notes: editNotes, deadline: editDeadline });
-        setEditingId(null);
-      } catch (error) { console.error("Error saving edits: ", error); }
-    };
-
-    // --- SORTING & FILTERING ---
-    const filteredTasks = tasks.filter(t => {
-      if (!searchTerm) return true;
-      const term = searchTerm.toLowerCase();
-      return (t.subject.toLowerCase().includes(term) || (t.accountSid && t.accountSid.toLowerCase().includes(term)) || (t.notes && t.notes.toLowerCase().includes(term)));
-    });
-
-    const priorityWeights = { urgent: 4, high: 3, medium: 2, low: 1 };
-    
-    const activeTasks = filteredTasks.filter(t => !t.completed).sort((a, b) => priorityWeights[b.priority] - priorityWeights[a.priority]);
-    const completedTasks = filteredTasks.filter(t => t.completed).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    const getPriorityColor = (level) => {
-      switch(level) {
-        case 'urgent': return 'bg-red-100 text-red-700 border-red-200';
-        case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
-        case 'medium': return 'bg-blue-100 text-blue-700 border-blue-200';
-        case 'low': return 'bg-slate-100 text-slate-600 border-slate-200';
-        default: return 'bg-slate-100 text-slate-600';
-      }
-    };
-
-    // --- RENDER VIEWS ---
-    if (!activeUser) {
+    // GATEKEEPER: If not logged in, show Login Screen inside the Task Manager page
+    if (!user) {
       return (
         <div className={pageBg}>
-          <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-blue-600 mb-8 flex items-center font-medium transition-colors">← Back to Dashboard</button>
-          <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mt-10">
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">Cloud Task Manager</h1>
-            <p className="text-slate-500 mb-6 text-sm">Log in to sync your tasks across devices instantly.</p>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} className={inputClass} placeholder="e.g. akshay@workspace.com" required />
-              <button type="submit" className={buttonClass}>Connect to Cloud</button>
+          <button onClick={() => setCurrentPage('home')} className="mb-10 text-slate-500">← Back</button>
+          <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
+            <h2 className="text-2xl font-bold mb-2">Private Task Manager</h2>
+            <p className="text-slate-500 mb-6 text-sm">Please login to sync your tasks.</p>
+            <form onSubmit={handleAuth}>
+              <input type="email" placeholder="Email" value={email} onChange={(e)=>setEmail(e.target.value)} className={inputClass} required />
+              <input type="password" placeholder="Password" value={password} onChange={(e)=>setPassword(e.target.value)} className={inputClass} required />
+              <button type="submit" className={buttonClass}>{authMode === 'login' ? 'Login' : 'Sign Up'}</button>
             </form>
+            <button onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} className="w-full mt-4 text-sm text-blue-600 text-center">
+              {authMode === 'login' ? "New here? Create account" : "Have an account? Login"}
+            </button>
           </div>
         </div>
       );
@@ -479,109 +343,61 @@ export default function App() {
     return (
       <div className={pageBg}>
         <div className="flex justify-between items-center mb-8">
-          <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-blue-600 flex items-center font-medium transition-colors">← Back to Dashboard</button>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-slate-600">Logged in as: <strong className="text-slate-900">{activeUser}</strong></span>
-            <button onClick={handleLogout} className="text-sm text-red-500 hover:text-red-700 font-medium px-3 py-1 bg-red-50 rounded-lg">Logout</button>
-          </div>
+          <button onClick={() => setCurrentPage('home')} className="text-slate-500">← Back</button>
+          <button onClick={handleLogout} className="text-xs font-bold text-red-500 bg-red-50 px-3 py-1 rounded">Logout ({user.email})</button>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 sticky top-10">
-              <h2 className="text-xl font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Create Cloud Task</h2>
-              <form onSubmit={handleAddTask} className="space-y-4">
-                <div><label className="block text-sm font-semibold text-slate-700 mb-1">Subject / Ticket ID</label><input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} className={inputClass} placeholder="e.g. Server Migration" required /></div>
-                <div><label className="block text-sm font-semibold text-slate-700 mb-1">Account SID</label><input type="text" value={taskSid} onChange={(e) => setTaskSid(e.target.value)} className={inputClass} placeholder="e.g. ACC-123" required /></div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Priority</label>
-                  <select value={priority} onChange={(e) => setPriority(e.target.value)} className={inputClass}>
-                    <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
-                  </select>
-                </div>
-                <div><label className="block text-sm font-semibold text-slate-700 mb-1">Deadline</label><input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={inputClass} /></div>
-                <div><label className="block text-sm font-semibold text-slate-700 mb-1">Notes & Updates</label><textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={`${inputClass} resize-none h-24`} placeholder="Add initial context here..."></textarea></div>
-                <button type="submit" className={buttonClass}>Add to Cloud Sync</button>
-              </form>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className={cardClass}>
+            <h3 className="font-bold mb-4">Add Task</h3>
+            <form onSubmit={handleAddTask}>
+              <input type="text" placeholder="Task Subject" value={subject} onChange={(e)=>setSubject(e.target.value)} className={inputClass} required />
+              <button type="submit" className={buttonClass}>Save to Cloud</button>
+            </form>
           </div>
-
-          <div className="lg:col-span-2 flex flex-col h-[85vh]">
-            <div className="mb-6"><input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`${inputClass} !py-4 text-lg`} placeholder="🔍 Search tasks by Subject, SID, or Notes..." /></div>
-            <div className="flex gap-4 mb-4 border-b border-slate-200 pb-2">
-              <button onClick={() => setShowHistory(false)} className={`text-lg font-bold transition-colors ${!showHistory ? 'text-slate-900 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>Active Priority Board ({activeTasks.length})</button>
-              <button onClick={() => setShowHistory(true)} className={`text-lg font-bold transition-colors ${showHistory ? 'text-slate-900 border-b-2 border-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}>Completed History ({completedTasks.length})</button>
-            </div>
-
-            <div className="overflow-y-auto pr-2 space-y-4 pb-10 flex-1 custom-scrollbar">
-              {!showHistory ? (
-                activeTasks.length === 0 ? (
-                  <div className="bg-slate-100 border border-dashed border-slate-300 rounded-xl p-10 text-center text-slate-500">{searchTerm ? "No active tasks match your search." : "Your cloud queue is empty."}</div>
-                ) : (
-                  activeTasks.map(task => (
-                    <div key={task.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
-                      <div className="flex gap-4 items-start">
-                        <div className="pt-1"><input type="checkbox" checked={task.completed} onChange={() => toggleComplete(task.id, task.completed)} className="w-5 h-5 cursor-pointer accent-emerald-600" /></div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start mb-1">
-                            <div><h3 className="text-lg font-bold text-slate-900 leading-tight">{task.subject}</h3><p className="text-xs font-mono text-slate-500 mt-1">SID: {task.accountSid}</p></div>
-                            <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full border ${getPriorityColor(task.priority)}`}>{task.priority}</span>
-                          </div>
-                          
-                          {editingId !== task.id ? (
-                            <>
-                              <div className="text-sm text-slate-500 font-medium mb-3 mt-2">Deadline: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No Deadline'}</div>
-                              {task.notes && (<div className="bg-slate-50 p-3 rounded-lg text-sm text-slate-700 border border-slate-100 mb-3 whitespace-pre-wrap">{task.notes}</div>)}
-                              <div className="flex gap-3">
-                                <button onClick={() => startEditing(task)} className="text-sm text-blue-600 font-medium hover:underline">Edit / Add Update</button>
-                                <button onClick={() => deleteTask(task.id)} className="text-sm text-red-500 font-medium hover:underline">Delete</button>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="mt-3 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                              <div><label className="block text-xs font-semibold text-slate-600 mb-1">Update Deadline</label><input type="date" value={editDeadline} onChange={(e) => setEditDeadline(e.target.value)} className={`${inputClass} !py-2`} /></div>
-                              <div><label className="block text-xs font-semibold text-slate-600 mb-1">Add Updates/Notes</label><textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className={`${inputClass} resize-none h-24`} /></div>
-                              <div className="flex gap-2">
-                                <button onClick={() => saveEdit(task.id)} className="bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-emerald-700">Save to Cloud</button>
-                                <button onClick={() => setEditingId(null)} className="bg-slate-200 text-slate-700 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-slate-300">Cancel</button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )
-              ) : (
-                completedTasks.length === 0 ? (
-                  <div className="bg-slate-100 border border-dashed border-slate-300 rounded-xl p-10 text-center text-slate-500">{searchTerm ? "No completed tasks match your search." : "You haven't completed any cloud tasks yet."}</div>
-                ) : (
-                  completedTasks.map(task => (
-                    <div key={task.id} className="bg-slate-50 p-5 rounded-xl border border-slate-200 opacity-70 hover:opacity-100 transition-opacity duration-200">
-                      <div className="flex gap-4 items-start">
-                        <div className="pt-1"><input type="checkbox" checked={task.completed} onChange={() => toggleComplete(task.id, task.completed)} className="w-5 h-5 cursor-pointer accent-slate-400" /></div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start mb-1">
-                             <div><h3 className="text-lg font-bold text-slate-600 line-through leading-tight">{task.subject}</h3><p className="text-xs font-mono text-slate-400 mt-1">SID: {task.accountSid}</p></div>
-                            <span className="text-xs font-bold uppercase px-3 py-1 rounded-full border bg-slate-200 text-slate-500 border-slate-300">Completed</span>
-                          </div>
-                          {task.notes && (<div className="bg-white p-3 rounded-lg text-sm text-slate-500 border border-slate-200 mb-3 whitespace-pre-wrap mt-2">{task.notes}</div>)}
-                          <div className="flex gap-3"><button onClick={() => deleteTask(task.id)} className="text-sm text-red-500 font-medium hover:underline">Delete Permanently</button></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )
-              )}
-            </div>
+          <div className="space-y-3">
+            <h3 className="font-bold">Your Tasks</h3>
+            {tasks.map(t => (
+              <div key={t.id} className="bg-white p-4 rounded-lg border flex justify-between">
+                <span>{t.subject}</span>
+                <button onClick={() => deleteDoc(doc(db, 'tasks', t.id))} className="text-red-400 text-xs">Delete</button>
+              </div>
+            ))}
           </div>
         </div>
       </div>
     );
   };
 
-  if (currentPage === 'home') return <HomeDashboard />;
-  if (currentPage === 'la-pool') return <LAPoolCalculator />;
+  // --- MAIN HOME DASHBOARD ---
+  const HomeDashboard = () => (
+    <div className={pageBg}>
+      <h1 className="text-3xl font-extrabold text-slate-900 mb-10 border-b pb-6">My Workspace</h1>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* LA POOL - PUBLIC */}
+        <div onClick={() => setCurrentPage('la-pool')} className="bg-white p-6 rounded-xl border border-slate-200 cursor-pointer hover:shadow-md transition-all">
+          <h2 className="text-xl font-bold text-blue-600">LA Pool</h2>
+          <p className="text-slate-500 text-sm mt-1">Open calculator for everyone.</p>
+        </div>
+        
+        {/* GP OVERVIEW - PUBLIC */}
+        <div onClick={() => setCurrentPage('gp-overview')} className="bg-white p-6 rounded-xl border border-slate-200 cursor-pointer hover:shadow-md transition-all">
+          <h2 className="text-xl font-bold text-green-600">GP Overview</h2>
+          <p className="text-slate-500 text-sm mt-1">Public reporting tools.</p>
+        </div>
+
+        {/* TASK MANAGER - PRIVATE */}
+        <div onClick={() => setCurrentPage('task-manager')} className="bg-white p-6 rounded-xl border-2 border-blue-100 cursor-pointer hover:border-blue-500 transition-all relative">
+          <span className="absolute top-3 right-3 text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold">PRIVATE</span>
+          <h2 className="text-xl font-bold text-slate-900">Task Manager</h2>
+          <p className="text-slate-500 text-sm mt-1">Cloud sync & encrypted login.</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ROUTER LOGIC
+  if (currentPage === 'la-pool') return <LAPool />;
   if (currentPage === 'gp-overview') return <GPOverview />;
   if (currentPage === 'task-manager') return <TaskManager />;
+  return <HomeDashboard />;
 }
