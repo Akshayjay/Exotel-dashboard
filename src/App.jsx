@@ -4,13 +4,13 @@ import { Pie } from 'react-chartjs-2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// --- NEW FIREBASE IMPORTS ---
+// --- FIREBASE IMPORTS ---
 import { db } from './firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot } from 'firebase/firestore';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-// --- ANIMATION HELPER ---
+// --- ANIMATION HELPER (Upgraded to handle decimals) ---
 const CountUp = ({ to, prefix = '', suffix = '' }) => {
   const [count, setCount] = useState(0);
 
@@ -20,16 +20,17 @@ const CountUp = ({ to, prefix = '', suffix = '' }) => {
     }
     let start = 0;
     const end = parseFloat(to);
+    const isDecimal = end % 1 !== 0; // Check if the target is a decimal
     const duration = 1200; 
     const increment = end / (duration / 16); 
 
     const timer = setInterval(() => {
       start += increment;
       if (start >= end) {
-        setCount(Math.round(end)); 
+        setCount(isDecimal ? Number(end.toFixed(2)) : Math.round(end)); 
         clearInterval(timer);
       } else {
-        setCount(Math.floor(start));
+        setCount(isDecimal ? Number(start.toFixed(2)) : Math.floor(start));
       }
     }, 16);
     return () => clearInterval(timer);
@@ -61,13 +62,21 @@ export default function App() {
         </div>
       </header>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div onClick={() => setCurrentPage('la-pool')} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-pointer transition-all duration-200 group">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">LA Pool Calculator</h2>
             <span className="text-slate-400 group-hover:text-blue-500 transition-colors">→</span>
           </div>
           <p className="text-slate-600 text-sm leading-relaxed">Calculate required allocations using active Part-A and Part-B inputs.</p>
+        </div>
+
+        <div onClick={() => setCurrentPage('cpm-calculator')} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-pointer transition-all duration-200 group">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">CPM & Channels</h2>
+            <span className="text-slate-400 group-hover:text-blue-500 transition-colors">→</span>
+          </div>
+          <p className="text-slate-600 text-sm leading-relaxed">Calculate CPM and Streaming Channels needed for your campaigns.</p>
         </div>
 
         <div onClick={() => setCurrentPage('gp-overview')} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 cursor-pointer transition-all duration-200 group">
@@ -88,6 +97,90 @@ export default function App() {
       </div>
     </div>
   );
+
+  // --- COMPONENT: CPM & Streaming Channel Calculator ---
+  const CPMCalculator = () => {
+    const [campaignHours, setCampaignHours] = useState('');
+    const [callDuration, setCallDuration] = useState('');
+    const [pickupRate, setPickupRate] = useState('');
+    const [callsPerDay, setCallsPerDay] = useState('');
+    const [results, setResults] = useState(null);
+
+    const handleCalculate = () => {
+      const hours = Number(campaignHours);
+      const duration = Number(callDuration);
+      const rate = Number(pickupRate);
+      const calls = Number(callsPerDay);
+
+      if (!hours || !duration || !rate || !calls) {
+        alert("Please fill in all fields with valid numbers.");
+        return;
+      }
+
+      // Formula 1: CPM Needed = roundup(callsperday / (agent calling * 60), 0)
+      const cpmNeeded = Math.ceil(calls / (hours * 60));
+
+      // Formula 2: Streaming Channels = cpmneeded * pickup rate * (average call duration / 60)
+      // Note: Assumes pickup rate is entered as a percentage (e.g., 15 for 15%)
+      const streamingChannels = cpmNeeded * (rate / 100) * (duration / 60);
+
+      setResults({
+        cpm: cpmNeeded,
+        channels: streamingChannels
+      });
+    };
+
+    return (
+      <div className={pageBg}>
+        <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-blue-600 mb-8 flex items-center font-medium transition-colors">← Back to Dashboard</button>
+        <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-slate-900">CPM & Streaming Channels</h1>
+            <p className="text-slate-500 mt-1">Calculate your campaign connectivity requirements.</p>
+          </div>
+          
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Campaign Hours (Hrs)</label>
+                <input type="number" value={campaignHours} onChange={(e) => setCampaignHours(e.target.value)} className={inputClass} placeholder="e.g. 8" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Calls Per Day</label>
+                <input type="number" value={callsPerDay} onChange={(e) => setCallsPerDay(e.target.value)} className={inputClass} placeholder="e.g. 5000" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Avg Call Duration (sec)</label>
+                <input type="number" value={callDuration} onChange={(e) => setCallDuration(e.target.value)} className={inputClass} placeholder="e.g. 120" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Pickup Rate (%)</label>
+                <input type="number" value={pickupRate} onChange={(e) => setPickupRate(e.target.value)} className={inputClass} placeholder="e.g. 15" />
+              </div>
+            </div>
+
+            <button onClick={handleCalculate} className={buttonClass}>Calculate Requirements</button>
+
+            {results && (
+              <div className="mt-8 pt-8 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+                <div className="p-6 bg-blue-50 border border-blue-100 rounded-2xl text-center shadow-inner">
+                  <p className="text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wide">CPM Needed</p>
+                  <CountUp to={results.cpm} />
+                </div>
+                <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-2xl text-center shadow-inner">
+                  <p className="text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wide">Streaming Channels</p>
+                  {/* Reusing CountUp but overriding the color for variety */}
+                  <span className="text-indigo-600 font-extrabold text-5xl">
+                    <CountUp to={results.channels} />
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // --- COMPONENT: LA Pool Calculator ---
   const LAPoolCalculator = () => {
@@ -582,6 +675,7 @@ export default function App() {
 
   if (currentPage === 'home') return <HomeDashboard />;
   if (currentPage === 'la-pool') return <LAPoolCalculator />;
+  if (currentPage === 'cpm-calculator') return <CPMCalculator />;
   if (currentPage === 'gp-overview') return <GPOverview />;
   if (currentPage === 'task-manager') return <TaskManager />;
 }
