@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
-import { Pie, Bar } from 'react-chartjs-2';
+import { Pie } from 'react-chartjs-2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -18,120 +18,186 @@ import {
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
-// --- STYLES ---
+// --- GLOBAL STYLES & CONSTANTS ---
 const pageBg = "min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-800";
-const cardClass = "bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all";
-const buttonClass = "w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-sm hover:bg-blue-700 transition-all active:scale-95";
 const inputClass = "w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none mb-4 text-slate-700";
+const buttonClass = "w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-sm hover:bg-blue-700 transition-all active:scale-95";
+const buttonSecondaryClass = "w-full bg-slate-100 text-slate-700 font-semibold py-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition-all";
 
-// --- SUB-COMPONENTS (Moved outside to fix the focus bug) ---
+// --- HELPER COMPONENTS ---
+
+const CountUp = ({ to }) => {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let start = 0;
+    const end = parseInt(to);
+    if (start === end) return;
+    let totalMiliseconds = 500;
+    let incrementTime = (totalMiliseconds / end) * 5;
+    let timer = setInterval(() => {
+      start += 5;
+      setCount(start);
+      if (start >= end) {
+        setCount(end);
+        clearInterval(timer);
+      }
+    }, incrementTime);
+    return () => clearInterval(timer);
+  }, [to]);
+  return <span className="text-4xl font-black text-blue-900">₹{count.toLocaleString()}</span>;
+};
 
 const LoginView = ({ email, setEmail, password, setPassword, authMode, setAuthMode, handleAuth }) => (
-  <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl border border-slate-200 mt-10 animate-in fade-in zoom-in duration-300">
-    <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Private Access</h1>
+  <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl border border-slate-200 mt-10">
+    <h2 className="text-2xl font-bold mb-2 text-slate-900">Private Access</h2>
     <p className="text-slate-500 mb-8 text-sm">{authMode === 'login' ? 'Login to manage your tasks' : 'Create a private account'}</p>
     <form onSubmit={handleAuth}>
       <input type="email" placeholder="Email" value={email} onChange={(e)=>setEmail(e.target.value)} className={inputClass} required />
       <input type="password" placeholder="Password" value={password} onChange={(e)=>setPassword(e.target.value)} className={inputClass} required />
       <button type="submit" className={buttonClass}>{authMode === 'login' ? 'Login' : 'Sign Up'}</button>
     </form>
-    <button onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} className="w-full mt-4 text-sm text-blue-600 font-medium hover:underline text-center block">
+    <button onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} className="w-full mt-4 text-sm text-blue-600 font-medium hover:underline text-center">
       {authMode === 'login' ? "Need an account? Sign Up" : "Already have an account? Login"}
     </button>
   </div>
 );
 
-const LAPool = ({ setCurrentPage }) => {
-  const [total, setTotal] = useState(1000);
-  const [ratio, setRatio] = useState(70);
-  const partA = (total * (ratio / 100)).toFixed(2);
-  const partB = (total - partA).toFixed(2);
+// --- TOOL COMPONENT: LA POOL CALCULATOR ---
+const LAPoolCalculator = ({ setCurrentPage }) => {
+  const [partAAllocations, setPartAAllocations] = useState('');
+  const [partBAllocations, setPartBAllocations] = useState('');
+  const [finalResult, setFinalResult] = useState(null);
+
+  const handleCalculate = () => {
+    const a = Number(partAAllocations);
+    const b = Number(partBAllocations);
+    if (isNaN(a) || isNaN(b) || (partAAllocations === '' && partBAllocations === '')) {
+      setFinalResult(null); alert("Please enter valid numbers."); return;
+    }
+    setFinalResult(Math.ceil(1.3 * (a + b)));
+  };
 
   return (
     <div className={pageBg}>
-      <button onClick={() => setCurrentPage('home')} className="mb-6 text-slate-500 hover:text-slate-900">← Back</button>
-      <h2 className="text-3xl font-bold mb-6">LA Pool Calculator</h2>
-      <div className={`${cardClass} max-w-lg`}>
-        <label className="block text-sm font-bold mb-2">Total Volume</label>
-        <input type="number" value={total} onChange={(e)=>setTotal(e.target.value)} className={inputClass} />
-        <label className="block text-sm font-bold mb-2">Part A Percentage ({ratio}%)</label>
-        <input type="range" min="0" max="100" value={ratio} onChange={(e)=>setRatio(e.target.value)} className="w-full mb-6" />
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-            <p className="text-xs text-blue-600 font-bold uppercase">Part A</p>
-            <p className="text-2xl font-black text-blue-900">{partA}</p>
+      <button onClick={() => setCurrentPage('home')} className="text-slate-500 hover:text-blue-600 mb-8 flex items-center font-medium transition-colors">← Back to Dashboard</button>
+      <div className="max-w-xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+        <h1 className="text-2xl font-bold text-slate-900 mb-8">LA Pool Allocation</h1>
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Active allocations of <span className="text-blue-600">Part-A</span>?</label>
+            <input type="number" value={partAAllocations} onChange={(e) => setPartAAllocations(e.target.value)} className={inputClass} />
           </div>
-          <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
-            <p className="text-xs text-indigo-600 font-bold uppercase">Part B</p>
-            <p className="text-2xl font-black text-indigo-900">{partB}</p>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Allocations of <span className="text-blue-600">Part-B</span>?</label>
+            <input type="number" value={partBAllocations} onChange={(e) => setPartBAllocations(e.target.value)} className={inputClass} />
           </div>
+          <button onClick={handleCalculate} className={buttonClass}>Calculate Required Allocation</button>
+          {finalResult !== null && (
+            <div className="mt-8 pt-8 border-t border-slate-100 text-center">
+              <p className="text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wide">Result</p>
+              <div className="px-10 py-6 inline-block bg-blue-50 border border-blue-100 rounded-2xl shadow-inner">
+                  <CountUp to={finalResult} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
+// --- TOOL COMPONENT: GP OVERVIEW ---
 const GPOverview = ({ setCurrentPage }) => {
-  const [skus, setSkus] = useState([
-    { id: 1, name: 'Item A', qty: 10, price: 50 },
-    { id: 2, name: 'Item B', qty: 5, price: 120 }
-  ]);
+  const [view, setView] = useState('entry');
+  const [records, setRecords] = useState([]); 
+  const [entity, setEntity] = useState('');
+  const [accountSid, setAccountSid] = useState('');
+  const [skuInputs, setSkuInputs] = useState([{ id: 1, name: '', gp: '' }]);
+  const [lastMonthData, setLastMonthData] = useState({});
+  const [showComparisonResult, setShowComparisonResult] = useState(false);
 
-  const totalValue = skus.reduce((sum, item) => sum + (item.qty * item.price), 0);
+  const addSkuRow = () => setSkuInputs([...skuInputs, { id: Date.now(), name: '', gp: '' }]);
+  const removeSkuRow = (id) => setSkuInputs(skuInputs.filter(sku => sku.id !== id));
+  const updateSku = (id, field, value) => setSkuInputs(skuInputs.map(sku => sku.id === id ? { ...sku, [field]: value } : sku));
 
-  const chartData = {
-    labels: skus.map(s => s.name),
-    datasets: [{
-      label: 'Value',
-      data: skus.map(s => s.qty * s.price),
-      backgroundColor: ['#3b82f6', '#818cf8', '#6366f1', '#4f46e5'],
-      borderRadius: 8
-    }]
+  const saveCurrentForm = () => {
+    if (!entity || !accountSid) { alert("Please provide both Entity and Account SID."); return false; }
+    const validSkus = skuInputs.filter(s => s.name.trim() !== '' && s.gp !== '');
+    if (validSkus.length === 0) { alert("Please add at least one valid SKU with a GP amount."); return false; }
+    const newRecords = validSkus.map(s => ({ entity, accountSid, sku: s.name, gp: parseFloat(s.gp) }));
+    setRecords([...records, ...newRecords]);
+    return true;
+  };
+
+  const handleSaveAndNext = () => { if (saveCurrentForm()) { setAccountSid(''); setSkuInputs([{ id: Date.now(), name: '', gp: '' }]); } };
+  const handleCalculate = () => { if (entity && accountSid && skuInputs[0].name && skuInputs[0].gp) { saveCurrentForm(); } setView('summary'); };
+
+  const totalGP = records.reduce((sum, r) => sum + r.gp, 0);
+  const entityGroups = records.reduce((acc, r) => {
+    if (!acc[r.entity]) acc[r.entity] = { total: 0, sids: {} };
+    if (!acc[r.entity].sids[r.accountSid]) acc[r.entity].sids[r.accountSid] = 0;
+    acc[r.entity].sids[r.accountSid] += r.gp; acc[r.entity].total += r.gp; return acc;
+  }, {});
+
+  const pieLabels = Object.keys(entityGroups);
+  const pieDataValues = Object.values(entityGroups).map(ent => ent.total);
+  const pieData = { labels: pieLabels, datasets: [{ data: pieDataValues, backgroundColor: ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'], borderWidth: 0 }] };
+
+  const handleLastMonthChange = (sid, value) => setLastMonthData({ ...lastMonthData, [sid]: parseFloat(value) || 0 });
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.text("GP Overview Report", 14, 22);
+    autoTable(doc, {
+      startY: 30,
+      head: [['Account SID', 'GP Amount']],
+      body: records.map(r => [r.accountSid, `${r.gp.toLocaleString()} INR`]),
+    });
+    doc.save('GP_Report.pdf');
   };
 
   return (
     <div className={pageBg}>
-      <button onClick={() => setCurrentPage('home')} className="mb-6 text-slate-500 hover:text-slate-900">← Back</button>
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h2 className="text-3xl font-bold">GP Overview</h2>
-          <p className="text-slate-500">Inventory value tracking</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs font-bold text-slate-400 uppercase">Total Portfolio Value</p>
-          <p className="text-3xl font-black text-slate-900">${totalValue.toLocaleString()}</p>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className={cardClass}>
-          <h3 className="font-bold mb-4">SKU List</h3>
-          <table className="w-full text-left">
-            <thead>
-              <tr className="text-xs text-slate-400 uppercase border-b border-slate-100">
-                <th className="pb-2">Name</th>
-                <th className="pb-2">Qty</th>
-                <th className="pb-2 text-right">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {skus.map(s => (
-                <tr key={s.id}>
-                  <td className="py-3 font-medium">{s.name}</td>
-                  <td className="py-3 text-slate-500">{s.qty}</td>
-                  <td className="py-3 text-right font-bold">${s.qty * s.price}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className={cardClass}>
-          <h3 className="font-bold mb-4">Value Distribution</h3>
-          <div className="h-64">
-            <Bar data={chartData} options={{ maintainAspectRatio: false }} />
+      <button onClick={() => setCurrentPage('home')} className="text-slate-500 mb-8 flex items-center font-medium">← Back</button>
+      {view === 'entry' && (
+        <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+          <h2 className="text-2xl font-bold mb-6">GP Data Entry</h2>
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            <input type="text" value={entity} onChange={(e)=>setEntity(e.target.value)} className={inputClass} placeholder="Entity Name" />
+            <input type="text" value={accountSid} onChange={(e)=>setAccountSid(e.target.value)} className={inputClass} placeholder="Account SID" />
+          </div>
+          <div className="space-y-4 mb-8">
+            {skuInputs.map((sku) => (
+              <div key={sku.id} className="flex gap-4">
+                <input type="text" value={sku.name} onChange={(e) => updateSku(sku.id, 'name', e.target.value)} className={inputClass} placeholder="SKU Name" />
+                <input type="number" value={sku.gp} onChange={(e) => updateSku(sku.id, 'gp', e.target.value)} className={inputClass} placeholder="GP ₹" />
+              </div>
+            ))}
+            <button onClick={addSkuRow} className="text-blue-600 text-sm font-bold">+ Add SKU Row</button>
+          </div>
+          <div className="flex gap-4">
+            <button onClick={handleSaveAndNext} className={buttonSecondaryClass}>Save & Add Next</button>
+            <button onClick={handleCalculate} className={buttonClass}>Finish & Summary</button>
           </div>
         </div>
-      </div>
+      )}
+      {view === 'summary' && (
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="bg-blue-600 text-white p-10 rounded-2xl text-center">
+            <h3 className="text-blue-100 uppercase text-xs font-bold tracking-widest mb-2">Total GP</h3>
+            <div className="text-5xl font-black">₹{totalGP.toLocaleString()}</div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white p-6 rounded-2xl border">
+               <Pie data={pieData} />
+            </div>
+            <div className="space-y-4">
+              <button onClick={exportToPDF} className={buttonClass}>Download PDF</button>
+              <button onClick={() => setView('entry')} className={buttonSecondaryClass}>Add More Data</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -146,7 +212,6 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [tasks, setTasks] = useState([]);
   const [subject, setSubject] = useState('');
-  const [taskSid, setTaskSid] = useState('');
 
   // 1. Auth Listener
   useEffect(() => {
@@ -158,10 +223,7 @@ export default function App() {
 
   // 2. Task Listener
   useEffect(() => {
-    if (!user) {
-      setTasks([]);
-      return;
-    }
+    if (!user) { setTasks([]); return; }
     const q = query(collection(db, 'tasks'), where('userId', '==', user.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -180,75 +242,48 @@ export default function App() {
     } catch (error) { alert(error.message); }
   };
 
-  const handleLogout = () => {
-    signOut(auth);
-    setEmail('');
-    setPassword('');
-  };
-
   const handleAddTask = async (e) => {
     e.preventDefault();
-    if (!subject) return;
     await addDoc(collection(db, 'tasks'), {
       userId: user.uid,
-      userEmail: user.email,
       subject,
-      accountSid: taskSid || 'N/A',
       completed: false,
       createdAt: new Date().toISOString()
     });
-    setSubject(''); setTaskSid('');
+    setSubject('');
   };
 
-  // --- ROUTER RENDERING ---
-
-  if (currentPage === 'la-pool') return <LAPool setCurrentPage={setCurrentPage} />;
+  // ROUTER
+  if (currentPage === 'la-pool') return <LAPoolCalculator setCurrentPage={setCurrentPage} />;
   if (currentPage === 'gp-overview') return <GPOverview setCurrentPage={setCurrentPage} />;
   
   if (currentPage === 'task-manager') {
     if (!user) return (
       <div className={pageBg}>
         <button onClick={() => setCurrentPage('home')} className="mb-6 text-slate-500">← Back</button>
-        <LoginView 
-          email={email} setEmail={setEmail} 
-          password={password} setPassword={setPassword} 
-          authMode={authMode} setAuthMode={setAuthMode} 
-          handleAuth={handleAuth} 
-        />
+        <LoginView email={email} setEmail={setEmail} password={password} setPassword={setPassword} authMode={authMode} setAuthMode={setAuthMode} handleAuth={handleAuth} />
       </div>
     );
-
     return (
       <div className={pageBg}>
         <div className="flex justify-between items-center mb-8">
           <button onClick={() => setCurrentPage('home')} className="text-slate-500">← Back</button>
-          <div className="flex items-center gap-4 bg-white p-2 rounded-xl border border-slate-200">
-            <span className="text-xs font-bold text-slate-400 pl-2 uppercase">{user.email}</span>
-            <button onClick={handleLogout} className="text-xs font-bold text-red-500 bg-red-50 px-3 py-2 rounded-lg hover:bg-red-100">Logout</button>
-          </div>
+          <button onClick={() => signOut(auth)} className="text-xs font-bold text-red-500 bg-red-50 px-3 py-1 rounded">Logout</button>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className={cardClass}>
-            <h3 className="font-bold mb-4">Add Task</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200">
+            <h3 className="font-bold mb-4">New Private Task</h3>
             <form onSubmit={handleAddTask}>
-              <input type="text" placeholder="Subject" value={subject} onChange={(e)=>setSubject(e.target.value)} className={inputClass} required />
-              <input type="text" placeholder="Account SID (Optional)" value={taskSid} onChange={(e)=>setTaskSid(e.target.value)} className={inputClass} />
+              <input type="text" placeholder="Task description..." value={subject} onChange={(e)=>setSubject(e.target.value)} className={inputClass} required />
               <button type="submit" className={buttonClass}>Save to Cloud</button>
             </form>
           </div>
-          <div className="lg:col-span-2 space-y-4">
-            <h3 className="font-bold text-slate-400 uppercase text-xs">Your Private Tasks ({tasks.length})</h3>
-            {tasks.length === 0 ? (
-              <div className="text-center py-20 bg-slate-100/50 rounded-2xl border-2 border-dashed border-slate-200">
-                <p className="text-slate-400">No tasks found. Add your first one!</p>
-              </div>
-            ) : tasks.map(t => (
-              <div key={t.id} className="bg-white p-5 rounded-2xl border border-slate-200 flex justify-between items-center group hover:border-blue-300 transition-colors">
-                <div>
-                  <p className="font-bold text-slate-800">{t.subject}</p>
-                  <p className="text-xs text-slate-400">SID: {t.accountSid}</p>
-                </div>
-                <button onClick={() => deleteDoc(doc(db, 'tasks', t.id))} className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">Delete</button>
+          <div className="space-y-3">
+            <h3 className="font-bold text-slate-400 uppercase text-xs">Your Secure Tasks</h3>
+            {tasks.map(t => (
+              <div key={t.id} className="bg-white p-4 rounded-xl border flex justify-between">
+                <span className="font-medium">{t.subject}</span>
+                <button onClick={() => deleteDoc(doc(db, 'tasks', t.id))} className="text-red-400 text-xs hover:underline">Delete</button>
               </div>
             ))}
           </div>
@@ -260,29 +295,22 @@ export default function App() {
   // HOME DASHBOARD
   return (
     <div className={pageBg}>
-      <header className="mb-12 border-b border-slate-200 pb-8">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Workspace<span className="text-blue-600">.</span></h1>
-        <p className="text-slate-500 font-medium mt-2">Professional suite for data and productivity.</p>
-      </header>
-      
+      <h1 className="text-3xl font-black mb-10 border-b pb-6">My Workspace</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div onClick={() => setCurrentPage('la-pool')} className="bg-white p-8 rounded-3xl border border-slate-200 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all">
-          <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 text-blue-600 font-bold">LA</div>
-          <h2 className="text-xl font-bold">LA Pool</h2>
-          <p className="text-slate-500 text-sm mt-2 leading-relaxed">Public calculator for volume and percentage allocations.</p>
+        <div onClick={() => setCurrentPage('la-pool')} className="bg-white p-8 rounded-3xl border border-slate-200 cursor-pointer hover:shadow-xl transition-all">
+          <h2 className="text-xl font-bold text-blue-600">LA Pool</h2>
+          <p className="text-slate-500 text-sm mt-1 font-medium italic">Public Tool</p>
         </div>
-        
-        <div onClick={() => setCurrentPage('gp-overview')} className="bg-white p-8 rounded-3xl border border-slate-200 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all">
-          <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center mb-6 text-green-600 font-bold">GP</div>
-          <h2 className="text-xl font-bold">GP Overview</h2>
-          <p className="text-slate-500 text-sm mt-2 leading-relaxed">Public SKU tracking, analytics, and performance charts.</p>
+        <div onClick={() => setCurrentPage('gp-overview')} className="bg-white p-8 rounded-3xl border border-slate-200 cursor-pointer hover:shadow-xl transition-all">
+          <h2 className="text-xl font-bold text-emerald-600">GP Overview</h2>
+          <p className="text-slate-500 text-sm mt-1 font-medium italic">Public Tool</p>
         </div>
-
-        <div onClick={() => setCurrentPage('task-manager')} className="bg-slate-900 p-8 rounded-3xl border border-slate-800 cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all group relative overflow-hidden">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-600/10 rounded-full blur-2xl group-hover:bg-blue-600/20 transition-all"></div>
-          <span className="text-[10px] bg-blue-600 text-white px-3 py-1 rounded-full font-black tracking-widest uppercase mb-6 inline-block">Secure</span>
-          <h2 className="text-xl font-bold text-white mt-2">Task Manager</h2>
-          <p className="text-slate-400 text-sm mt-2 leading-relaxed">Private cloud sync for your personal workflow tasks.</p>
+        <div onClick={() => setCurrentPage('task-manager')} className="bg-slate-900 p-8 rounded-3xl border border-slate-800 cursor-pointer hover:shadow-2xl transition-all group">
+          <div className="flex justify-between items-start">
+            <h2 className="text-xl font-bold text-white">Task Manager</h2>
+            <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-black">PRIVATE</span>
+          </div>
+          <p className="text-slate-400 text-sm mt-1">Cloud Sync Enabled</p>
         </div>
       </div>
     </div>
